@@ -80,16 +80,22 @@ class T1MonitorNode(Node):
         self._send_tts_if_explicitly_approved()
 
     def _log_runtime_graph(self) -> None:
-        topic_map = self.get_topic_names_and_types()
-        service_map = self.get_service_names_and_types()
-        present = {name: any(n == name for n, _t in topic_map) for name in
-                   (self._bms_topic, self._touch_topic, self._asr_topic)}
+        # Count PUBLISHERS on the robot side, not graph entries: our own
+        # subscriptions also appear in topic lists, so a topic name alone
+        # proves nothing (handbook Chapter 1: schema != live publisher).
+        bms_pub = self.count_publishers(self._bms_topic)
+        touch_pub = self.count_publishers(self._touch_topic)
+        asr_pub = self.count_publishers(self._asr_topic)
+        tts_ready = self._tts_client.service_is_ready()
         self.get_logger().info(
-            f"Runtime graph: {len(topic_map)} topics and {len(service_map)} services discovered; "
-            f"bms_present={present[self._bms_topic]} touch_present={present[self._touch_topic]} "
-            f"asr_present={present[self._asr_topic]} tts_service_present="
-            f"{any(n == self._tts_service for n, _t in service_map)}"
+            f"Robot-side publishers: bms={bms_pub} touch={touch_pub} asr={asr_pub}; "
+            f"tts_service_ready={tts_ready}"
         )
+        if bms_pub == 0:
+            self.get_logger().warning(
+                "No BMS publisher detected (0 = robot not publishing; check developer "
+                "mode, reboot, subnet, ROS_DOMAIN_ID, QoS)."
+            )
 
     # ------------------------------------------------------------------ sensors
     def _on_bms(self, message: Bms) -> None:

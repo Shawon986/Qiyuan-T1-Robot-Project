@@ -94,6 +94,16 @@
    - Extracted to `~/t1_workspaces/primebot_sdk_v1.0.0.0/` for reference. **Baseline decision pending PrimeBot firmware confirmation** — both overlays kept available.
 5. **AIUI docs link** (`yuque.com/aiui_open_platform/fqow12/esgax5gboxdq5s07`): page returns 页面出错了 and the public API 404s — the doc is private/moved. Awaiting a corrected link from the user. Robot-side ASR appears to be built in (`/aima/agent/asr_result`), so an AIUI account may only be needed for custom voice-service configuration.
 
+## 2026-10-08 — Phase 9: Portal SDK build + t1_monitor app (robot-readiness)
+
+1. **Portal SDK v1.0.0.0 built** in `~/t1_workspaces/primebot_sdk_v1.0.0.0`: 4 packages, 11 min 9 s, exit 0. Overlay now exposes **54 aimdk_msgs interfaces** (53 + new `agent/msg/AsrResult`).
+2. **t1_monitor app** created in repo `apps/t1_monitor` (ament_python): BMS/touch/ASR subscriptions (qos sensor data), guarded TTS client (enable + confirmation token + ≤240 chars), motion permanently disabled, launch file, 6 offline policy unit tests.
+3. Built the app against the portal overlay: `colcon build --base-paths apps` → 1 package, exit 0. Offline tests **6/6 passed** (no robot, no ROS needed).
+4. **Lesson recorded (handbook principle "schema ≠ live publisher")**: first smoke run reported BMS/touch/ASR "present" — these were the app's own subscriptions appearing in the graph. Fixed `_log_runtime_graph()` to use `count_publishers()` (robot-side publishers only) and `service_is_ready()`; `first_contact.sh` now runs `ros2 topic info -v` publisher checks before echoing. Rebuilt and re-verified: correct output `Robot-side publishers: bms=0 touch=0 asr=0; tts_service_ready=False` + explicit warning when no publisher is detected.
+5. Added `scripts/first_contact.sh` (Day 5: evidence capture incl. publisher checks) and `scripts/net_bringup.sh` (Day 4: USB-NIC static IP + pings).
+
+**Robot-readiness complete on the PC side.** Remaining: physical USB-Ethernet adapter, PrimeBot SSH credentials, Developer Mode activation (all user-side).
+
 ## Status & next steps
 
 | Item | Status |
@@ -107,6 +117,8 @@
 | Portal SDK v1.0.0.0 + T1 URDF | ✅ downloaded; portal SDK extracted & diffed vs git (newer: agent/ASR interfaces) |
 | SDK baseline (portal vs git) | ⏳ confirm with PrimeBot which matches your firmware |
 | AIUI docs link | ❌ broken (page error) — awaiting corrected link |
+| Portal SDK v1.0.0.0 built | ✅ 4 packages, 54 interfaces (incl. AsrResult) |
+| t1_monitor app | ✅ built + 6/6 offline tests + honest publisher-count introspection |
 | Robot SSH credentials | ⏳ awaiting user request to PrimeBot after-sales |
 | Firmware ↔ SDK compatibility confirmation | ⏳ awaiting PrimeBot |
 | Developer Mode activation | ⏳ Day 5 (needs credentials + physical access) |

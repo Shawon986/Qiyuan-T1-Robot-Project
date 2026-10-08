@@ -25,6 +25,12 @@ LOG="$OUT/discovery.log"
   ros2 topic list -t
   echo "=== services (typed) ==="
   ros2 service list -t
+  echo "=== BMS publisher check ==="
+  ros2 topic info -v /aima/hal/bms/state
+  echo "=== touch publisher check ==="
+  ros2 topic info -v /aima/hal/touch/state
+  echo "=== ASR publisher check ==="
+  ros2 topic info -v /aima/agent/asr_result
   echo "=== BMS one-shot (5 s timeout) ==="
   timeout 5 ros2 topic echo /aima/hal/bms/state --once
   echo "=== touch one-shot (5 s timeout) ==="
