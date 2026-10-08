@@ -124,6 +124,13 @@
 5. **Reference agents**: didi_taxi_agent (robot ASR + native TTS + external API key file `/home/run/ceshi/runtime/...`), luobodun_game (reuses robot ASR or external Qwen ASR), weather_forecast (Open-Meteo + robot TTS).
 6. **Architecture decision**: implement our four features as a PrimeAgent skill (official integration path — rpk package, runs on robot) while keeping the standalone ROS 2 app path for PC development and testing. All four features map to verified interfaces now.
 
+## 2026-10-08 — Phase 12: Deployment toolchain review (arm-native-toolchain)
+
+1. Read the full `arm-native-toolchain` guide: robot boards are **aarch64** (RK / NVIDIA Orin platforms), running ROS 2 Humble natively.
+2. Two build paths: ARM-native compile ON the board via Docker (`native-aarch64-rk` / `native-aarch64-orin` images from the portal) or x86 cross-compile from our PC (`docker_x86_cross_arm`, image ~5.4/44.6 GB). Deployable artifact = colcon `install/` dir (tar → scp → source setup.bash).
+3. **Our app is Python-only → no compilation needed**; robot already ships vendored aarch64 site-packages (numpy/opencv) per the video_call skill (`/home/run/tennis_coach_t1/vendor/aarch64/site-packages`).
+4. **Windows CRLF warning (section 3.5)**: added `.gitattributes` to the repo forcing LF for all text files (`*.sh/*.py/*.md/*.yaml/...`), per the vendor's recommendation for Windows-based teams.
+
 ## Status & next steps
 
 | Item | Status |
