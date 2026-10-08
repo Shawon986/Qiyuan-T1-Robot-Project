@@ -76,6 +76,9 @@ Both sides develop against this contract with mocks; final integration test at t
 
 ## Status
 
-- TOS uploader + SeeDance client + PC test harness: ready to build as soon as
-  TOS credentials and the SeeDance API spec arrive.
+- ✅ **Client package built** (`apps/seedance`, 2026-10-08): config (env/.env), Ark client
+  (submit/poll/wait, validated payloads), BytePlus Object Storage uploader (boto3 S3 + pre-signed URLs),
+  pipeline + CLI. 10/10 offline tests; colcon build clean.
+- Decision (2026-10-08): **Option B — BytePlus Object Storage** for robot-recorded videos.
+- ⏳ Needs user: TOS_ACCESS_KEY / TOS_SECRET_KEY / TOS_BUCKET / TOS_ENDPOINT in `.env` for live video tests.
 - Robot camera adapter: implement after Day 5 (developer mode active).

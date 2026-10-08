@@ -159,6 +159,17 @@
 4. Next: build the Python client package (`apps/seedance`) — submit/poll/result + video-upload adapter
    (inbox or TOS, pending final choice with the developer).
 
+## 2026-10-08 — Phase 15: seedance client package built (Option B: BytePlus Object Storage)
+
+1. User chose **Option B** for hosting robot-recorded videos: BytePlus Object Storage (same account as ModelArk).
+2. Built `apps/seedance` (ament_python): `config.py` (env/.env loader, testable), `client.py` (validated
+   payloads + submit/get/wait + fail-closed ArkError), `storage.py` (boto3 S3-compatible TOS upload +
+   pre-signed URL, lazy boto3 import), `pipeline.py` (upload → submit → poll → result), `main.py` CLI
+   (`seedance run --prompt ... --video x.mp4`).
+3. Installed boto3 1.43.109 (user, TUNA mirror). **10/10 offline tests passed**; colcon build:
+   2 packages (seedance + t1_monitor), 0 errors.
+4. Pending for live video-path test: user fills TOS_ACCESS_KEY/TOS_SECRET_KEY/TOS_BUCKET/TOS_ENDPOINT in `.env`.
+
 ## Status & next steps
 
 | Item | Status |
