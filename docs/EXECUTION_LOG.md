@@ -111,6 +111,19 @@
 3. **Requirements collected**: iFlytek APPID/APIKey/APISecret; Qwen DashScope key (qwen-long); Volcano TOS AK/SK + bucket; SeeDance REST API spec; PrimeBot confirmations (SSH creds, firmware↔SDK, gimbal resource/action IDs, preset motion list).
 4. Plan document updated (Rev 3: project definition + cloud credential list + revised Days 6–11). Conversation/TOS/SeeDance work is PC-testable without the robot.
 
+## 2026-10-08 — Phase 11: PrimeAgent skill ecosystem review (requirements found)
+
+1. Cloned the full AtomGit org: `q1-dev-guide`, `robot_video_call`, `carry-clothes`, `didi_taxi_agent`, `luobodun_game`, `weather_forecast`, `AboutUs`, `arm-native-toolchain`, `atomcode-skills`.
+2. **PrimeAgent + Lumina**: the vendor's agent runtime on the robot; skills are Python apps packaged as `.rpk` with a `cfg/pkg.yaml` manifest (`user_id, version, sdk_version: "v1.0.0", package_name, author, description`), a `main.py` entrypoint, `src/<pkg>/` code, `resource/` assets. Entrypoint runs on the robot (`source /robot/etc/basic_env && source /robot/software/rtsp_server/setup.bash && python3 -m <pkg>.app`).
+3. **Verified robot interfaces from `robot_video_call`** (vendor reference implementation):
+   - Camera: ROS topic `/aima/hal/camera/head_stereo_left_orin` (sensor_msgs/Image) + robot-side RTSP server (`/robot/software/rtsp_server`); CaptureJpegImage service.
+   - Microphone: ROS topic `/aima/hal/audio/capture` (`aimdk_msgs/msg/AudioCapture`).
+   - Speaker: publish `aimdk_msgs/msg/AudioPlayback` (48 kHz stereo PCM, 20 ms chunks) or PlayTts service; audio-focus services `RequestAudioFocus` / `AbandonAudioFocus`; volume/mute services `GetVolume/SetVolume/GetMute/SetMute`; `PlayEmotion` service.
+   - Web/console pattern: Flask/ThreadingHTTPServer UI + media bridge ports; browser media over WebRTC/HTTP.
+4. **SDK capability boundaries from `carry-clothes` README**: NO navigation interface, NO gripper, NO end-effector force sensing in the SDK — use vision servoing + preset motions (BIPED_LOCOMOTION_WBC rolling mode noted).
+5. **Reference agents**: didi_taxi_agent (robot ASR + native TTS + external API key file `/home/run/ceshi/runtime/...`), luobodun_game (reuses robot ASR or external Qwen ASR), weather_forecast (Open-Meteo + robot TTS).
+6. **Architecture decision**: implement our four features as a PrimeAgent skill (official integration path — rpk package, runs on robot) while keeping the standalone ROS 2 app path for PC development and testing. All four features map to verified interfaces now.
+
 ## Status & next steps
 
 | Item | Status |
@@ -126,6 +139,7 @@
 | AIUI docs link | ❌ broken (page error) — awaiting corrected link |
 | Portal SDK v1.0.0.0 built | ✅ 4 packages, 54 interfaces (incl. AsrResult) |
 | t1_monitor app | ✅ built + 6/6 offline tests + honest publisher-count introspection |
+| PrimeAgent skill ecosystem | ✅ reviewed: skill format (pkg.yaml/rpk), verified camera/audio/focus interfaces |
 | Robot SSH credentials | ⏳ awaiting user request to PrimeBot after-sales |
 | Firmware ↔ SDK compatibility confirmation | ⏳ awaiting PrimeBot |
 | Developer Mode activation | ⏳ Day 5 (needs credentials + physical access) |
