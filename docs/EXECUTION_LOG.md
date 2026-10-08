@@ -79,6 +79,21 @@
    - Windows: `usbipd list` → find BUSID → `usbipd bind --busid <BUSID>` → `usbipd attach --wsl`
    - WSL: the adapter appears as a Linux NIC (e.g. `eth1`) → configure `10.1.1.99/24` on it (Section 5 of plan).
 
+## 2026-10-08 — Phase 8: Developer portal & API docs review
+
+1. **dev.primebot.com** reviewed: login is **AtomGit OAuth**; `/download` page hosts per-model packs (separate T1 and Q1 sections), a PrimeConsole desktop client, and links to **atomgit.com/primebot** + **skillhub.primebot.com**.
+2. **Downloaded** to `D:\Qiyuan T1 Robotics project\downloads\`:
+   - `sdk_t1-v1.0.0.0.zip` (13.2 MB, dated Oct 7) — portal T1 SDK
+   - `T1_URDF.zip` (18.3 MB)
+   - (Noted for later: docker toolchain packs — `docker_arm_native_arm.zip`, `docker_x86_native_x86.zip`, `docker_x86_cross_arm-v1.0.0.zip`; Q1 packs are a different robot.)
+3. **Cloned from AtomGit**: `t1-urdf` (66 MB — meshes/urdf/config/launch, for simulation) and `qzai-guide` (1.6 MB — Q仔 consumer experience guide: PrimeBOT APP, wake words 你好Q仔/Q仔Q仔).
+4. **KEY FINDING — portal SDK ≠ pinned git SDK**: `diff` of the portal zip against commit fe2e186 shows the portal v1.0.0.0 is **newer**:
+   - Adds `aimdk_msgs/agent/msg/AsrResult.msg` → topic `/aima/agent/asr_result` (is_final, confidence, event_id) — robot-side ASR results.
+   - New ASR examples (`get_asr_result.py/.cpp`); audio examples reworked (`play_audio_from_pc` / `play_audio_from_robot`, `media_role` param, robot-side audio path `/robot/software/aimrt_agent/bin/cfg/t1/audio`).
+   - Updated `接口说明.md` (full interface manual incl. 语音识别 section), Fast DDS profile, and minor Bms.msg corrections (bit 13/14 温度下限 fix).
+   - Extracted to `~/t1_workspaces/primebot_sdk_v1.0.0.0/` for reference. **Baseline decision pending PrimeBot firmware confirmation** — both overlays kept available.
+5. **AIUI docs link** (`yuque.com/aiui_open_platform/fqow12/esgax5gboxdq5s07`): page returns 页面出错了 and the public API 404s — the doc is private/moved. Awaiting a corrected link from the user. Robot-side ASR appears to be built in (`/aima/agent/asr_result`), so an AIUI account may only be needed for custom voice-service configuration.
+
 ## Status & next steps
 
 | Item | Status |
@@ -89,6 +104,9 @@
 | Project GitHub repo | ✅ initialized, populated |
 | WSL networking | ⚠️ NAT stable; Windows reboot recommended to clear mirrored-mode crash residue |
 | usbipd-win + WSL usbip tools | ✅ installed & ready (5.3.0; vhci-hcd loaded) |
+| Portal SDK v1.0.0.0 + T1 URDF | ✅ downloaded; portal SDK extracted & diffed vs git (newer: agent/ASR interfaces) |
+| SDK baseline (portal vs git) | ⏳ confirm with PrimeBot which matches your firmware |
+| AIUI docs link | ❌ broken (page error) — awaiting corrected link |
 | Robot SSH credentials | ⏳ awaiting user request to PrimeBot after-sales |
 | Firmware ↔ SDK compatibility confirmation | ⏳ awaiting PrimeBot |
 | Developer Mode activation | ⏳ Day 5 (needs credentials + physical access) |
