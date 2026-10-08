@@ -104,6 +104,13 @@
 
 **Robot-readiness complete on the PC side.** Remaining: physical USB-Ethernet adapter, PrimeBot SSH credentials, Developer Mode activation (all user-side).
 
+## 2026-10-08 — Phase 10: Project scope confirmed
+
+1. **Scope confirmed with the user**: application-layer development only (no hardware/firmware changes, warranty intact). Four demo features: (a) Cantonese conversation (wake word 机器人 → iFlytek Cantonese ASR → Qwen LLM with session memory → iFlytek Cantonese TTS → speaker), (b) follow-and-film (vision lock → gimbal track → video record), (c) dancing (JSON timeline over preset motions/music/LED/screen), (d) SeeDance integration (video + voice prompt → Volcano TOS → SeeDance AI video → web status → result to robot).
+2. **Architecture decisions recorded** (keeps everything on MC high-level interfaces): Cantonese ASR/TTS via iFlytek cloud (robot onboard ASR likely Mandarin-only; robot mic/audio SDK interfaces used for capture/playback); video encoded app-side from CaptureJpegImage/RTSP; dancing uses preset motions only; secrets via env/secret store.
+3. **Requirements collected**: iFlytek APPID/APIKey/APISecret; Qwen DashScope key (qwen-long); Volcano TOS AK/SK + bucket; SeeDance REST API spec; PrimeBot confirmations (SSH creds, firmware↔SDK, gimbal resource/action IDs, preset motion list).
+4. Plan document updated (Rev 3: project definition + cloud credential list + revised Days 6–11). Conversation/TOS/SeeDance work is PC-testable without the robot.
+
 ## Status & next steps
 
 | Item | Status |

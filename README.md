@@ -1,6 +1,23 @@
 # Qiyuan T1 Robot Project
 
-Secondary development project for the **Qiyuan / PRIMEBOT T1** transformable quadruped/bipedal robot.
+Secondary development project for the **Qiyuan / PRIMEBOT T1 Pro** transformable quadruped/bipedal robot.
+
+## What we are building
+
+Application-layer development ONLY (no hardware/firmware changes — warranty intact). The robot is an
+"entry terminal": our Python app runs on top of the official Qiyuan SDK and combines built-in
+capabilities into four demo features, plus cloud integration.
+
+| Feature | Pipeline |
+|---|---|
+| **Cantonese conversation** | wake word 机器人 → iFlytek Cantonese ASR → Qwen LLM (long-context session memory) → iFlytek Cantonese TTS → robot speaker |
+| **Follow-and-film** | voice command → vision lock (OpenCV/YOLO) → gimbal track (MC high-level) → video record (app-side encode) |
+| **Dancing** | JSON timeline → music / chassis / gimbal / lights / screen synchronized (preset motions only) |
+| **SeeDance integration** | record video + voice prompt → Volcano TOS upload → SeeDance AI-video task → web status → result back to robot |
+
+Cloud services: **iFlytek** (Cantonese ASR/TTS), **Qwen** (LLM), **Volcano TOS** (storage), **SeeDance** (own platform).
+
+Safety posture: MC high-level interfaces only; never low-level joint control.
 
 ## Stack & baseline
 
