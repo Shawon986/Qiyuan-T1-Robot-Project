@@ -81,7 +81,11 @@ class TosUploader:
             aws_secret_access_key=self.cfg.tos_secret_key,
             endpoint_url=self.cfg.tos_endpoint,
             region_name=self.cfg.tos_region,
-            config=BotoConfig(signature_version="s3v4"),
+            config=BotoConfig(
+                signature_version="s3v4",
+                # TOS S3-compatible endpoints (tos-s3-*.bytepluses.com) expect path-style
+                s3={"addressing_style": "path"},
+            ),
         )
 
     def upload_and_publish(self, local_path: str | Path) -> str:

@@ -181,6 +181,20 @@
    developer enabling the inbox.
 3. Next: user asks the developer to enable the inbox endpoint (or we use the TOS fallback).
 
+## 2026-10-08 — Phase 17: FULL SeeDance flow live-validated end-to-end
+
+1. **PATH 1 (developer inbox, Option A): COMPLETE SUCCESS.** Live run: generated 3s 720×720 test clip
+   (≥407,696 px per model requirement) → uploaded to the developer's inbox (endpoint now live —
+   earlier 404 resolved) → submitted to Seedance → task `cgt-20261008211838-zlptg` →
+   **status succeeded** → result video URL returned. The whole robot flow minus the camera works.
+2. Model constraint learned: reference video must be ≥407,696 total pixels (480×480 rejected).
+3. PATH 2 (BytePlus TOS fallback): upload failed with `InvalidPathAccess: Forbidden path to access
+   server` (path-style on tos-s3 endpoint) and virtual-host variant 400. Likely the AccessKey needs
+   TOS permission enabled in the BytePlus console (key permission toggle) — non-blocking, inbox is
+   the production path.
+4. User filled TOS credentials + bucket `qiyuanseedance` (ap-southeast-1) created; endpoint format
+   `https://tos-s3-ap-southeast-1.bytepluses.com` recorded.
+
 ## Status & next steps
 
 | Item | Status |

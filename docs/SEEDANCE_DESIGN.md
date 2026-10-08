@@ -77,8 +77,10 @@ Both sides develop against this contract with mocks; final integration test at t
 ## Status
 
 - ✅ **Client package built** (`apps/seedance`, 2026-10-08): config (env/.env), Ark client
-  (submit/poll/wait, validated payloads), BytePlus Object Storage uploader (boto3 S3 + pre-signed URLs),
-  pipeline + CLI. 10/10 offline tests; colcon build clean.
-- Decision (2026-10-08): **Option B — BytePlus Object Storage** for robot-recorded videos.
-- ⏳ Needs user: TOS_ACCESS_KEY / TOS_SECRET_KEY / TOS_BUCKET / TOS_ENDPOINT in `.env` for live video tests.
+  (submit/poll/wait, validated payloads), two hosting backends (developer inbox default,
+  BytePlus Object Storage fallback), pipeline + CLI. 16/16 offline tests; colcon build clean.
+- ✅ **LIVE END-TO-END VALIDATED (2026-10-08) via the developer inbox (Option A)**: upload →
+  submit → poll → succeeded → result URL. Reference-video spec: mp4 2–30s, ≥407,696 px.
+- ⚠️ TOS fallback (Option B): bucket + keys configured but upload fails with `InvalidPathAccess`
+  — likely AccessKey needs TOS permission enabled in console. Non-blocking.
 - Robot camera adapter: implement after Day 5 (developer mode active).
