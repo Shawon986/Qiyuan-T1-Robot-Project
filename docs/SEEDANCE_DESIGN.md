@@ -1,12 +1,21 @@
 # SeeDance Integration — Design & Implementation Plan
 
-## CONFIRMED API (extracted 2026-10-08 from the developer's web/index.html)
+## CONFIRMED API — VALIDATED END-TO-END with live key (2026-10-08)
 
-- Seedance model is hosted on **BytePlus ModelArk** (ByteDance): base `https://ark.ap-southeast.bytepluses.com/api/v3`
-- Submit task: `POST /contents/generations/tasks`
-- Query status: `GET /contents/generations/tasks/{id}`
+- Seedance model is hosted on **BytePlus ModelArk**: base `https://ark.ap-southeast.bytepluses.com/api/v3`
 - Auth: `Authorization: Bearer <ModelArk API Key>`
-- Model tiers: Seedance 2.5 / 2.0-fast / 2.0-mini (must be activated in the ModelArk console, else 404 ModelNotOpen)
+- Model: `dreamina-seedance-2-0-fast-260128` (tiers: 2.5 / 2.0-fast / 2.0-mini; must be activated in console)
+- **Submit**: `POST /contents/generations/tasks`
+  `{"model": ..., "content": [{"type":"text","text":"..."}, {"type":"image_url","image_url":{"url":"data:image/png;base64,..."},"role":"first_frame"}]}` → `{"id":"cgt-..."}`
+- **Poll**: `GET /contents/generations/tasks/{id}` → `status: running|succeeded|failed`, on success `content.video_url` (TOS-signed mp4)
+- **Reference rules (empirically verified)**:
+  - images: inline base64 data URI ✅ works (or public URL)
+  - videos/audio: ONLY public URL or `asset://` — base64 rejected; Ark Files API ids (`file-...`) are NOT accepted in tasks
+  - the official `CreateAsset` (→ asset://) requires AccessKey HMAC signing AND a public URL — so for robot-recorded
+    videos a brief public hosting step is unavoidable: **developer's inbox** (PUT /sd-inbox-67862519/<name>, ~2h expiry)
+    or **BytePlus Object Storage** (same account, pre-signed/public URL)
+- Task list: `GET /contents/generations/tasks`
+- Files API (`POST /api/v3/files`, Bearer, multipart) works for raw storage but is not referenceable from generation tasks.
 - Browser cannot call upstream directly (CORS) — the web UI uses a forwarder: online at
   https://apivmorai.com/seedance/ (hosted by the developer) or local `node proxy.mjs` on 127.0.0.1:8790.
   The robot-side Python client calls the Ark endpoints server-side — no proxy needed.

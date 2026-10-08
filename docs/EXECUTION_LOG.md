@@ -143,6 +143,22 @@
 4. API key handling: web page stores it in browser session/local storage (entered via UI); robot side reads
    `SEEDANCE_API_KEY` from `D:\Qiyuan T1 Robotics project\.env`.
 
+## 2026-10-08 — Phase 14: SeeDance API validated end-to-end (live key, user-approved test)
+
+1. Probed the Ark API with the real key (read-only): task list 200; `/contents/generations/assets` exists but is
+   not the documented upload path (JSON-only, internal errors); **Files API** (`POST /api/v3/files`, Bearer,
+   multipart) works — uploaded test images got `file-...` ids with ~7-day expiry.
+2. **User-approved paid test (minimal)**: submitted 3 generation tasks —
+   (a) text-only → **succeeded** with `content.video_url` (TOS-signed mp4);
+   (b) `file://` reference → rejected InvalidParameter;
+   (c) bare file id → rejected;
+   (d) inline base64 data-URI image as first_frame → **succeeded**.
+3. **Validated contract** (recorded in SEEDANCE_DESIGN.md): images can be inline base64; videos/audio require a
+   public URL or `asset://` (CreateAsset needs AK signing + public URL — so robot videos need a brief public
+   hosting step: developer's inbox or BytePlus Object Storage). Cost of the test tasks: a few cents.
+4. Next: build the Python client package (`apps/seedance`) — submit/poll/result + video-upload adapter
+   (inbox or TOS, pending final choice with the developer).
+
 ## Status & next steps
 
 | Item | Status |
