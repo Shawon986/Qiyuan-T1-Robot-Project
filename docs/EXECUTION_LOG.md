@@ -70,6 +70,15 @@
    - `git init -b main`; `git remote add origin https://github.com/Shawon986/Qiyuan-T1-Robot-Project.git` (repo was empty)
    - Added: `README.md`, `.gitignore`, `docs/` (plan docx + this log), `scripts/` (environment setup scripts for reproducibility).
 
+## 2026-10-08 — Phase 7: USB passthrough tooling (Day-4 prep)
+
+1. Installed **usbipd-win 5.3.0** on Windows via winget (package `dorssel.usbipd-win`, installer hash verified).
+2. Installed **WSL-side usbip tools**: `linux-tools-generic` + `hwdata` (apt) → `/usr/bin/usbip` present.
+3. Loaded the `vhci-hcd` kernel module in WSL — the virtual USB host controller is ready.
+4. Day-4 usage (when the USB-Ethernet adapter is plugged in):
+   - Windows: `usbipd list` → find BUSID → `usbipd bind --busid <BUSID>` → `usbipd attach --wsl`
+   - WSL: the adapter appears as a Linux NIC (e.g. `eth1`) → configure `10.1.1.99/24` on it (Section 5 of plan).
+
 ## Status & next steps
 
 | Item | Status |
@@ -79,6 +88,7 @@
 | T1 SDK pinned build + interface verification | ✅ 4 packages, 53 interfaces |
 | Project GitHub repo | ✅ initialized, populated |
 | WSL networking | ⚠️ NAT stable; Windows reboot recommended to clear mirrored-mode crash residue |
+| usbipd-win + WSL usbip tools | ✅ installed & ready (5.3.0; vhci-hcd loaded) |
 | Robot SSH credentials | ⏳ awaiting user request to PrimeBot after-sales |
 | Firmware ↔ SDK compatibility confirmation | ⏳ awaiting PrimeBot |
 | Developer Mode activation | ⏳ Day 5 (needs credentials + physical access) |
