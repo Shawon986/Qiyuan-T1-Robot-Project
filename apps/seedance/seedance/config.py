@@ -43,9 +43,19 @@ class SeedanceConfig:
         self.tos_bucket = env.get("TOS_BUCKET", "")
         self.tos_endpoint = env.get("TOS_ENDPOINT", "")
         self.tos_region = env.get("TOS_REGION", "ap-southeast-1")
+        # Option A: developer relay inbox (default hosting path, no cloud account needed)
+        self.inbox_base = env.get("SEEDANCE_INBOX_BASE", "https://apivmorai.com")
+        self.inbox_path = env.get("SEEDANCE_INBOX_PATH", "/sd-inbox-67862519")
         self.poll_interval_s = float(env.get("SEEDANCE_POLL_INTERVAL_S", "5"))
         self.poll_timeout_s = float(env.get("SEEDANCE_POLL_TIMEOUT_S", "600"))
         self.upload_expire_s = int(env.get("SEEDANCE_UPLOAD_EXPIRE_S", "7200"))
 
+    def tos_ready(self) -> bool:
+        return bool(self.tos_access_key and self.tos_secret_key and self.tos_bucket)
+
+    def inbox_ready(self) -> bool:
+        return bool(self.inbox_base)
+
     def ready(self) -> bool:
-        return bool(self.api_key and self.tos_access_key and self.tos_secret_key and self.tos_bucket)
+        """True when at least one hosting backend plus the API key are available."""
+        return bool(self.api_key and (self.tos_ready() or self.inbox_ready()))

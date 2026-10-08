@@ -3,7 +3,7 @@ import unittest
 
 from seedance.client import ArkError, SeedanceClient, build_task_payload, result_video_url
 from seedance.config import SeedanceConfig
-from seedance.storage import object_key
+from seedance.storage import create_uploader, inbox_object_name, inbox_public_url, object_key
 
 FAKE_ENV = {
     "SEEDANCE_API_KEY": "test-key",
@@ -72,6 +72,36 @@ class TestObjectKey(unittest.TestCase):
         self.assertTrue(key.startswith("seedance/"))
         self.assertTrue(key.endswith(".mp4"))
         self.assertIn("-", key)
+
+
+class TestInbox(unittest.TestCase):
+    def test_random_name_shape(self):
+        name = inbox_object_name("clip.mp4")
+        self.assertTrue(name.endswith(".mp4"))
+        self.assertEqual(len(name), 32 + 4)  # 128-bit hex + extension
+
+    def test_unpredictable_names(self):
+        self.assertNotEqual(inbox_object_name("a.mp4"), inbox_object_name("a.mp4"))
+
+    def test_public_url_join(self):
+        url = inbox_public_url("https://apivmorai.com", "/sd-inbox-67862519", "abc.mp4")
+        self.assertEqual(url, "https://apivmorai.com/sd-inbox-67862519/abc.mp4")
+
+
+class TestUploaderFactory(unittest.TestCase):
+    def test_inbox_is_default(self):
+        from seedance.storage import InboxUploader
+        uploader = create_uploader(SeedanceConfig(env={"SEEDANCE_INBOX_BASE": "https://x.com"}))
+        self.assertIsInstance(uploader, InboxUploader)
+
+    def test_tos_fallback_when_inbox_empty(self):
+        from seedance.storage import TosUploader
+        uploader = create_uploader(SeedanceConfig(env={**FAKE_ENV, "SEEDANCE_INBOX_BASE": ""}))
+        self.assertIsInstance(uploader, TosUploader)
+
+    def test_no_backend_raises(self):
+        with self.assertRaises(RuntimeError):
+            create_uploader(SeedanceConfig(env={"SEEDANCE_INBOX_BASE": ""}))
 
 
 if __name__ == "__main__":

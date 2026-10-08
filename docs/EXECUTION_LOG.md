@@ -170,6 +170,17 @@
    2 packages (seedance + t1_monitor), 0 errors.
 4. Pending for live video-path test: user fills TOS_ACCESS_KEY/TOS_SECRET_KEY/TOS_BUCKET/TOS_ENDPOINT in `.env`.
 
+## 2026-10-08 — Phase 16: Option A inbox implemented; live endpoint not yet enabled
+
+1. Refactored `apps/seedance/storage.py` into two backends: `InboxUploader` (PUT to the developer's
+   relay inbox, default) and `TosUploader` (BytePlus Object Storage fallback), selected by
+   `create_uploader(cfg)`; pipeline uses the factory. **16/16 offline tests; colcon build clean.**
+2. **Live probe result**: `https://apivmorai.com/` and `/seedance/` → 200, but
+   `PUT /sd-inbox-67862519/<file>` → **404** — the inbox nginx rule is NOT enabled on the developer's
+   live server yet (their own page notes it must be reloaded). Option A is blocked pending the
+   developer enabling the inbox.
+3. Next: user asks the developer to enable the inbox endpoint (or we use the TOS fallback).
+
 ## Status & next steps
 
 | Item | Status |

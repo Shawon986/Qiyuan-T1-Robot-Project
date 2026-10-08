@@ -1,14 +1,33 @@
-"""BytePlus Object Storage (TOS, S3-compatible) video uploader.
+"""Video hosting backends for the Seedance pipeline.
 
-Uploads the robot-recorded video and returns a time-limited pre-signed URL that
-the ModelArk generation API can fetch (videos require a public URL - verified).
+Two interchangeable uploaders (both return a public URL Ark can download):
+  - InboxUploader: PUT the file to the developer's relay inbox — no cloud account
+    needed; the server returns a temporary public link (auto-deletes ~2h).
+    This is the DEFAULT path (Option A, chosen 2026-10-08).
+  - TosUploader: BytePlus Object Storage (S3-compatible) with pre-signed URLs
+    (Option B fallback).
 """
 from __future__ import annotations
 
+import secrets
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from .config import SeedanceConfig
+
+
+def inbox_object_name(local_path: str | Path) -> str:
+    """Unpredictable 128-bit random name with a whitelisted extension."""
+    path = Path(local_path)
+    suffix = path.suffix or ".mp4"
+    return f"{secrets.token_hex(16)}{suffix}"
+
+
+def inbox_public_url(base: str, inbox_path: str, name: str) -> str:
+    """The temporary public link the inbox serves the file from."""
+    return f"{base.rstrip('/')}{inbox_path}/{name}"
 
 
 def object_key(local_path: str | Path, prefix: str = "seedance") -> str:
@@ -18,11 +37,42 @@ def object_key(local_path: str | Path, prefix: str = "seedance") -> str:
     return f"{prefix}/{stamp}/{path.stem}-{int(time.time())}{path.suffix or ''}"
 
 
-class StorageUploader:
+class InboxUploader:
+    """Uploads to the developer's relay inbox (plain PUT, no auth by design)."""
+
     def __init__(self, cfg: SeedanceConfig | None = None) -> None:
         self.cfg = cfg or SeedanceConfig()
-        if not (self.cfg.tos_access_key and self.cfg.tos_secret_key and self.cfg.tos_bucket):
-            raise RuntimeError("TOS credentials not configured (check .env: TOS_ACCESS_KEY/TOS_SECRET_KEY/TOS_BUCKET)")
+        if not self.cfg.inbox_base:
+            raise RuntimeError("SEEDANCE_INBOX_BASE is not configured")
+
+    def upload_and_publish(self, local_path: str | Path) -> str:
+        path = Path(local_path)
+        if not path.is_file():
+            raise FileNotFoundError(f"video not found: {path}")
+        name = inbox_object_name(path)
+        url = inbox_public_url(self.cfg.inbox_base, self.cfg.inbox_path, name)
+        req = urllib.request.Request(
+            url, data=path.read_bytes(), method="PUT",
+            headers={"Content-Type": "application/octet-stream"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                if resp.status not in (200, 201, 204):
+                    raise RuntimeError(f"inbox upload failed: HTTP {resp.status}")
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"inbox upload rejected: HTTP {exc.code}") from exc
+        return url
+
+
+class TosUploader:
+    """BytePlus Object Storage (S3-compatible) uploader with pre-signed URLs."""
+
+    def __init__(self, cfg: SeedanceConfig | None = None) -> None:
+        self.cfg = cfg or SeedanceConfig()
+        if not self.cfg.tos_ready():
+            raise RuntimeError(
+                "TOS credentials not configured (TOS_ACCESS_KEY/TOS_SECRET_KEY/TOS_BUCKET)"
+            )
         import boto3  # lazy import keeps offline unit tests dependency-free
         from botocore.config import Config as BotoConfig
         self._s3 = boto3.client(
@@ -34,22 +84,26 @@ class StorageUploader:
             config=BotoConfig(signature_version="s3v4"),
         )
 
-    def upload_video(self, local_path: str | Path, key: str | None = None) -> str:
+    def upload_and_publish(self, local_path: str | Path) -> str:
         path = Path(local_path)
         if not path.is_file():
             raise FileNotFoundError(f"video not found: {path}")
-        key = key or object_key(path)
+        key = object_key(path)
         self._s3.upload_file(str(path), self.cfg.tos_bucket, key)
-        return key
-
-    def presigned_url(self, key: str, expires: int | None = None) -> str:
         return self._s3.generate_presigned_url(
             "get_object",
             Params={"Bucket": self.cfg.tos_bucket, "Key": key},
-            ExpiresIn=expires if expires is not None else self.cfg.upload_expire_s,
+            ExpiresIn=self.cfg.upload_expire_s,
         )
 
-    def upload_and_publish(self, local_path: str | Path) -> str:
-        """Upload the video and return a public URL Ark can download."""
-        key = self.upload_video(local_path)
-        return self.presigned_url(key)
+
+def create_uploader(cfg: SeedanceConfig | None = None):
+    """Factory: inbox first (chosen default), TOS as fallback."""
+    cfg = cfg or SeedanceConfig()
+    if cfg.inbox_ready():
+        return InboxUploader(cfg)
+    if cfg.tos_ready():
+        return TosUploader(cfg)
+    raise RuntimeError(
+        "no video-hosting backend configured (set SEEDANCE_INBOX_BASE or TOS_* credentials)"
+    )
