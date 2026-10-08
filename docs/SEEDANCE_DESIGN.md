@@ -1,5 +1,18 @@
 # SeeDance Integration — Design & Implementation Plan
 
+## CONFIRMED API (extracted 2026-10-08 from the developer's web/index.html)
+
+- Seedance model is hosted on **BytePlus ModelArk** (ByteDance): base `https://ark.ap-southeast.bytepluses.com/api/v3`
+- Submit task: `POST /contents/generations/tasks`
+- Query status: `GET /contents/generations/tasks/{id}`
+- Auth: `Authorization: Bearer <ModelArk API Key>`
+- Model tiers: Seedance 2.5 / 2.0-fast / 2.0-mini (must be activated in the ModelArk console, else 404 ModelNotOpen)
+- Browser cannot call upstream directly (CORS) — the web UI uses a forwarder: online at
+  https://apivmorai.com/seedance/ (hosted by the developer) or local `node proxy.mjs` on 127.0.0.1:8790.
+  The robot-side Python client calls the Ark endpoints server-side — no proxy needed.
+
+
+
 Feature 4 of the project: the robot records a video + voice prompt, uploads to Volcano TOS,
 submits to the SeeDance platform, which generates an AI video; the web page shows task
 status and the result is delivered back to the robot.

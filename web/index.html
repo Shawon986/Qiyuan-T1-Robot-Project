@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Seedance 视频创作台</title>
+<style>
+  :root{
+    color-scheme: dark;   /* 原生控件（下拉弹层/滑条/复选框/滚动条）走深色渲染 */
+    --bg:#0b0d14; --bg2:#11141d; --panel:#161a25; --panel2:#1d2231;
+    --line:#262c3d; --line2:#333b52;
+    --tx:#e8ecf6; --tx2:#9aa4bd; --tx3:#6b7590;
+    --brand:#6b5bff; --brand2:#8f7bff; --ok:#2fbf71; --warn:#e8a33d; --err:#f0576b;
+    --r:14px; --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 700px at 70% -10%,#1b1735 0%,var(--bg) 55%);
+    color:var(--tx); font:14px/1.6 "PingFang SC","Microsoft YaHei",-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  button,input,select,textarea{font:inherit;color:inherit}
+  /* 原生 select 弹层在部分浏览器不吃上面的 color:inherit，显式给一份深底浅字，避免白底白字看不见 */
+  select option,select optgroup{background-color:var(--panel2);color:var(--tx);font-weight:400}
+  select option:checked{background-color:var(--brand);color:#fff}
+  a{color:var(--brand2)}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#2b3145;border-radius:8px}
+
+  /* ---------- 顶栏 ---------- */
+  header{
+    flex:0 0 auto; display:flex; align-items:center; gap:12px; padding:12px 18px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line); background:rgba(11,13,20,.7); backdrop-filter:blur(10px);
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.3px;white-space:nowrap}
+  .dot{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,var(--brand),#c169ff);box-shadow:0 0 16px rgba(107,91,255,.6)}
+  .spacer{flex:1;min-width:0}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;
+    border:1px solid var(--line2);background:var(--panel);cursor:pointer;white-space:nowrap;flex:0 1 auto;min-width:0;
+  }
+  .pill:hover{border-color:var(--brand)}
+  .pill.on{background:rgba(107,91,255,.18);border-color:var(--brand);color:#fff}
+  #modelLabel{display:inline-block;max-width:220px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
+  .status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);white-space:nowrap}
+  .bulb{width:8px;height:8px;border-radius:50%;background:var(--tx3)}
+  .bulb.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .bulb.err{background:var(--err);box-shadow:0 0 8px var(--err)}
+
+  /* ---------- 作品流 ---------- */
+  main{flex:1 1 auto;overflow-y:auto;padding:22px 18px 12px}
+  .section-title{display:flex;align-items:baseline;gap:10px;margin:0 4px 14px}
+  .section-title h2{margin:0;font-size:16px}
+  .section-title span{font-size:12px;color:var(--tx3)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{
+    border:1px solid var(--line);border-radius:var(--r);background:var(--panel);overflow:hidden;
+    display:flex;flex-direction:column;box-shadow:var(--shadow);
+  }
+  .thumb{position:relative;aspect-ratio:16/9;background:#0e1119;display:flex;align-items:center;justify-content:center}
+  .thumb video{width:100%;height:100%;object-fit:contain;background:#000}
+  .thumb .ph{color:var(--tx3);font-size:12px;text-align:center;padding:0 16px}
+  .ring{width:56px;height:56px;border-radius:50%;border:3px solid #2c334a;border-top-color:var(--brand2);animation:spin 1.1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .badge{position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:999px;font-size:11px;background:rgba(0,0,0,.55);border:1px solid var(--line2)}
+  .badge.ok{color:#bff0d3;border-color:#245c3d}
+  .badge.err{color:#ffc9d1;border-color:#6a2a35}
+  .badge.run{color:#d9d2ff;border-color:#3d3572}
+  .cbody{padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+  .prompt{font-size:13px;color:var(--tx);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .meta{font-size:11.5px;color:var(--tx3);display:flex;flex-wrap:wrap;gap:6px}
+  .meta i{font-style:normal;padding:1px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg2)}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer;font-size:12.5px}
+  .btn:hover{border-color:var(--brand)}
+  .btn.mini{height:28px;font-size:12px}
+  .btn.danger:hover{border-color:var(--err);color:#ffb9c3}
+  .errbox{font-size:12px;color:#ffc9d1;background:rgba(240,87,107,.1);border:1px solid #5a2531;border-radius:9px;padding:8px 10px;white-space:pre-wrap;word-break:break-word}
+  .empty{padding:60px 20px;text-align:center;color:var(--tx3)}
+  .empty h3{color:var(--tx2);margin:0 0 8px;font-weight:600}
+
+  /* ---------- 底部控制台 ---------- */
+  footer{flex:0 0 auto;border-top:1px solid var(--line);background:rgba(17,20,29,.92);backdrop-filter:blur(12px);padding:12px 18px 14px}
+  .console{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .assets{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:34px}
+  .chip{position:relative;display:flex;align-items:center;gap:7px;padding:4px 8px 4px 4px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2);max-width:230px}
+  .chip img,.chip .vicon{width:34px;height:34px;border-radius:7px;object-fit:cover;background:#0e1119;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .chip .broken{color:var(--tx3);font-size:14px}
+  .chip .nm{font-size:12px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+  .chip select{height:24px;font-size:11px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:0 4px}
+  .chip .x{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);cursor:pointer;font-size:11px;line-height:16px;text-align:center;padding:0}
+  .chip .x:hover{border-color:var(--err);color:#ffb9c3}
+  .add{height:34px;padding:0 12px;border:1px dashed var(--line2);border-radius:10px;background:transparent;cursor:pointer;color:var(--tx2)}
+  .add:hover{border-color:var(--brand);color:var(--tx)}
+  textarea#prompt{
+    width:100%;min-height:76px;max-height:220px;resize:vertical;background:var(--bg2);
+    border:1px solid var(--line);border-radius:12px;padding:11px 12px;outline:none;
+  }
+  textarea#prompt:focus{border-color:var(--brand)}
+  .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .grp{display:flex;align-items:center;gap:5px;padding:0 9px;height:32px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:12.5px}
+  .grp label{color:var(--tx3);font-size:11.5px}
+  .grp select,.grp input{background:transparent;border:0;outline:none;height:30px;max-width:110px;color:var(--tx)}
+  .grp input[type=number]{width:66px}
+  .switch{display:flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel);cursor:pointer;font-size:12.5px;color:var(--tx2)}
+  .switch input{accent-color:var(--brand)}
+  .go{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .cost{font-size:11.5px;color:var(--tx3);text-align:right;max-width:230px}
+  .gen{height:40px;padding:0 22px;border:0;border-radius:999px;background:linear-gradient(135deg,var(--brand),#a25cff);color:#fff;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(107,91,255,.35)}
+  .gen:hover{filter:brightness(1.1)}
+  .gen:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+  /* ---------- 弹层 ---------- */
+  .mask{position:fixed;inset:0;background:rgba(4,6,12,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .mask.show{display:flex}
+  .modal{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--shadow)}
+  .modal h3{margin:0;padding:15px 18px;border-bottom:1px solid var(--line);font-size:15px}
+  .mbody{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field>span{font-size:12.5px;color:var(--tx2)}
+  .field input,.field select,.field textarea{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;outline:none;width:100%}
+  .field input:focus,.field textarea:focus{border-color:var(--brand)}
+  .hint{font-size:11.5px;color:var(--tx3);line-height:1.65}
+  .mfoot{padding:0 18px 16px;display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+  .mfoot .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  /* 当前档位不支持的字段：置灰禁用而不是隐藏（隐藏会让人找不到入口），悬停说明原因 */
+  .grp.off{opacity:.42}
+  .grp.off select{cursor:not-allowed}
+  /* 提示条靠顶部：底部是输入区与素材区，上传进度/拦截原因全在那里，再压一条上去就看不见了 */
+  .toast{position:fixed;left:50%;top:74px;transform:translateX(-50%);background:#20263a;border:1px solid var(--line2);padding:9px 16px;border-radius:14px;font-size:13px;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none;max-width:min(92vw,620px);text-align:center;white-space:pre-line;line-height:1.5;word-break:break-word}
+  .toast.show{opacity:1}
+
+  /* ---------- 响应式（375 / 768） ---------- */
+  @media (max-width:768px){
+    header{padding:9px 12px;gap:7px}
+    .logo span.txt{display:none}
+    #modelLabel{max-width:120px}
+    #btnModel .lbl{display:none}
+    .status #connText{display:none}
+    .pill{height:30px;padding:0 10px;font-size:12.5px}
+    main{padding:14px 12px 8px}
+    .grid{grid-template-columns:1fr}
+    footer{padding:10px 12px 12px}
+    .toast{top:104px}   /* 小屏顶栏会换行变高，提示条跟着下推，不盖住「连接设置 / 说明」按钮 */
+    .bar{gap:6px}
+    .grp,.switch{height:30px;font-size:12px}
+    .go{margin-left:0;width:100%}
+    .go .gen{flex:1}
+    .cost{max-width:none;flex:1;text-align:left}
+  }
+  @media (max-width:375px){
+    .thumb{aspect-ratio:4/3}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><i class="dot"></i><span class="txt">Seedance 视频创作台</span></div>
+  <div class="spacer"></div>
+  <div class="status"><i class="bulb" id="bulb"></i><span id="connText">未连接</span></div>
+  <button class="pill" id="btnModel" title="当前模型"><span class="lbl">模型：</span><b id="modelLabel" style="font-weight:600">—</b></button>
+  <button class="pill" id="btnCfg">连接设置</button>
+  <button class="pill" id="btnHelp">说明</button>
+</header>
+
+<main>
+  <div class="section-title">
+    <h2>我的作品</h2><span id="worksMeta">生成结果的视频链接由上游提供，有效期约 24 小时，请及时下载保存</span>
+  </div>
+  <div id="works"></div>
+</main>
+
+<footer>
+  <div class="console">
+    <div class="assets" id="assets"></div>
+    <textarea id="prompt" placeholder="描述你想要的画面：主体、动作、镜头、光线、氛围……（中文不超过 500 字，英文不超过 1000 词效果更稳）"></textarea>
+    <div class="bar">
+      <div class="grp" title="resolution｜按当前档位收敛：2.5 = 480p/720p/1080p；2.0 系列按官方能力矩阵为 480p/720p（两档都没有 4K）">
+        <label>分辨率</label>
+        <select id="pResolution"><option>480p</option><option selected>720p</option><option>1080p</option></select>
+      </div>
+      <div class="grp" title="ratio｜首帧/尾帧、视频编辑、视频延长三类任务上游强制要求「智能」，页面会自动纠正">
+        <label>画幅</label>
+        <select id="pRatio">
+          <option value="adaptive" selected>智能</option><option>16:9</option><option>9:16</option>
+          <option>1:1</option><option>4:3</option><option>3:4</option><option>21:9</option>
+        </select>
+      </div>
+      <div class="grp" title="duration｜2.5 取 4～30 秒或「智能」(-1，官方默认)；2.0 系列取 4～15 秒或「智能」；视频编辑任务必须「智能」">
+        <label>时长</label>
+        <select id="pDuration">
+          <option value="-1" selected>智能</option><option value="4">4s</option><option value="5">5s</option>
+          <option value="8">8s</option><option value="10">10s</option><option value="15">15s</option>
+          <option value="20">20s</option><option value="30">30s</option>
+        </select>
+      </div>
+      <div class="grp" data-cap="taskType" title="omnireference_tasktype｜官方参数表只把它列在 2.5。实测：给 2.0-mini 发这个字段不报错，但上游连非法取值都照收（不做取值校验），无法证明它在那一档生效，所以 2.0 档不发、这里变灰。参考图 / 参考视频照样能传，不选它也能做参考生成。选编辑/延长时会自动把画幅、时长收为「智能」">
+        <label>任务</label>
+        <select id="pTaskType">
+          <option value="auto" selected>自动判定</option><option value="reference">全模态参考</option>
+          <option value="edit">视频编辑</option><option value="extend">视频延长</option>
+        </select>
+      </div>
+      <div class="grp" data-cap="generateAudio" title="generate_audio｜是否生成与画面同步的声音，上游默认开。实测三档都生效：给 2.0-mini 发 false，查任务回显就是 generate_audio:false">
+        <label>声音</label>
+        <select id="pAudio"><option value="true" selected>有声</option><option value="false">无声</option></select>
+      </div>
+      <div class="grp" data-cap="outputFormat" title="output_format｜实测 2.5 收 mp4 与 mov（选 mov 出的文件确实是 .mov）；2.0 系列只收 mp4，给它发 mov 会被上游当场拒（错误原文：the specified model does not support this output_format），所以切到 2.0 档这里只剩 MP4。MOV 适合专业后期，但部分播放器不兼容">
+        <label>格式</label>
+        <select id="pFormat"><option value="mp4" selected>MP4</option><option value="mov">MOV</option></select>
+      </div>
+      <label class="switch" title="watermark｜勾选后右下角带「AI 生成」水印，上游默认不勾"><input type="checkbox" id="pWatermark" />水印</label>
+      <label class="switch" title="return_last_frame｜额外返回成片尾帧图（png、无水印），可用来续接下一段"><input type="checkbox" id="pLastFrame" />尾帧</label>
+      <div class="grp" title="seed｜相同提示词 + 相同种子可复现同一结果；留空或 -1 为每次随机。实测：2.5 与 2.0-mini 都接受这个字段（但上游不做取值校验，能否真的复现需要你自己用同一个种子跑两次比对）">
+        <label>种子</label><input type="number" id="pSeed" placeholder="随机" min="-1" max="4294967295" />
+      </div>
+      <div class="go">
+        <div class="cost" id="costHint">费用按你在 BytePlus 账户的用量结算</div>
+        <button class="gen" id="btnGen">生成视频</button>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- 连接设置 -->
+<div class="mask" id="mCfg">
+  <div class="modal">
+    <h3>连接设置</h3>
+    <div class="mbody">
+      <div class="field"><span>API Key（BytePlus ModelArk 控制台创建）</span>
+        <input type="password" id="fKey" placeholder="形如 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off" />
+        <label class="hint" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="fRemember" />记住到本机浏览器（不勾选则只保存在当前标签页，关掉即清空）</label>
+      </div>
+      <div class="field"><span>接口地址 Base URL</span>
+        <input type="text" id="fBase" placeholder="留空即用本页默认的转发地址" />
+        <div class="hint" id="baseHint"></div>
+      </div>
+      <div class="field"><span>模型（切档位时下方参数会按该档能力自动收敛）</span>
+        <select id="fModelSel"></select>
+        <input type="text" id="fModelCustom" placeholder="填入你控制台的 Model ID，如 dreamina-seedance-2-0-260128" style="display:none;margin-top:8px" autocomplete="off" />
+        <div class="hint" id="modelHint"></div>
+      </div>
+      <div id="cfgMsg" class="hint"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="btnTest">测试连接</button>
+      <button class="btn" id="btnCfgClose">关闭</button>
+      <button class="btn primary" id="btnCfgSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 素材链接 -->
+<div class="mask" id="mLink">
+  <div class="modal">
+    <h3>用链接添加参考素材</h3>
+    <div class="mbody">
+      <div class="field"><span>每行一个地址（图片 / 视频公网直链，或上游素材 ID <code>asset://xxx</code>）</span>
+        <textarea id="fLinks" style="min-height:110px" placeholder="https://example.com/a.jpg&#10;https://example.com/b.mp4&#10;asset://xxxxxxxx"></textarea>
+        <div class="hint">上游要求视频、音频必须是公网可访问的直链（或素材 ID），不收 Base64。图片除直链外也可直接选本地文件。</div>
+      </div>
+      <div class="field"><span>这批素材的用途</span>
+        <select id="fLinkRole">
+          <option value="auto" selected>自动（按文件类型判定）</option>
+          <option value="reference_image">参考图</option>
+          <option value="first_frame">首帧</option>
+          <option value="last_frame">尾帧</option>
+          <option value="reference_video">参考视频</option>
+          <option value="reference_audio">参考音频</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn" id="btnLinkClose">取消</button><button class="btn primary" id="btnLinkAdd">添加</button></div>
+  </div>
+</div>
+
+<!-- 说明 -->
+<div class="mask" id="mHelp">
+  <div class="modal">
+    <h3>这个页面怎么用</h3>
+    <div class="mbody">
+      <div class="hint" style="font-size:12.5px;color:var(--tx2)">
+        <p><b>1. 配好连接。</b>右上角「连接设置」填入你自己的 BytePlus ModelArk API Key，并选好模型档位（Seedance 2.5 / 2.0-fast / 2.0-mini，也可以手填别的 Model ID）。第一次用建议先点「测试连接」，能列出模型就说明 Key 可用。<b>但「模型清单里有」不等于「已开通」</b>——实测 2.0 标准版就在清单里，调用却返 404 ModelNotOpen，要先到控制台开通。切换档位时底部控制台会按该档能力自动收敛：不支持的字段变灰、不会发给上游，取值受限的字段（如输出格式）只列该档认的选项。</p>
+        <p><b>2. 接口地址从哪来。</b>浏览器不允许网页直接调上游接口（上游未开放跨域），所以请求必须经一层转发。<b>线上地址</b>（如 <code>https://apivmorai.com/seedance/</code>）已由本站服务器转发，打开即用、无需任何设置；<b>本机自用</b>则在本文件所在目录执行 <code>node proxy.mjs</code>，再打开 <code>http://127.0.0.1:8790/</code>，接口地址会自动填成本机转发地址。</p>
+        <p><b>3. 加素材。</b>图片可选本地文件或贴直链（本地图片转 Base64 随请求发出，单张 &lt;30MB、整个请求体 ≤64MB）。<b>视频与音频也可以直接选本地文件</b>——但上游那一栏只收公网直链或 <code>asset://</code>，所以页面会先把文件传到<b>中转收件箱</b>（本机为 proxy.mjs，线上为本站服务器），拿到一条临时直链再交给上游，<b>约 2 小时后自动删除</b>，删除后这条任务就再也不能重跑。也可以跳过上传、直接贴你自己图床 / OSS 的直链。官方数量与时长上限：2.5 参考图 ≤30 / 参考视频 ≤10 段且总时长 ≤30 秒 / 参考音频 ≤10 段且总时长 ≤30 秒；2.0 系列为图 ≤9 / 视频 ≤3 / 音频 ≤3，总时长 ≤15 秒。单条参考素材 2~30 秒、宽高比 0.4~2.5，选文件时页面会先读时长与尺寸预检，超限当场拦下（上游会直接拒）。<b>本机用 proxy.mjs 时，收件箱里的文件只有你自己电脑能访问，上游拉不到这条地址</b>——参考视频/音频要真正出片，必须用线上地址或测试服地址打开本页。</p>
+        <p><b>4. 参数与官方字段的对应。</b>以下每一条都有实测支撑（见 §4c）。分辨率 <code>resolution</code>（2.5 = 480p/720p/1080p；2.0 系列 = 480p/720p，实测给 mini/fast 发 1080p 直接被拒，两档都<b>没有 4K</b>）、画幅 <code>ratio</code>、时长 <code>duration</code>（2.5 = 4~30 秒或 -1 智能；2.0 系列 = 4~15 秒或 -1，实测 16 与 30 被拒）、任务类型 <code>omnireference_tasktype</code>（只给 2.5 下发：上游对该字段不做取值校验，无法证明它对 2.0 生效，不赌——但参考图 / 参考视频照样能传，官方矩阵「全模态参考」在 2.0 三档全支持）、声音 <code>generate_audio</code>（<b>三档都发</b>，实测给 mini 发 false 回显就是 false）、格式 <code>output_format</code>（<b>三档都发，但取值按档位收敛</b>：2.5 可选 mp4/mov，2.0 只认 mp4）、水印 <code>watermark</code>、尾帧 <code>return_last_frame</code>（实测上游会做类型校验，说明字段真被解析）、种子 <code>seed</code>。上游硬约束：首帧/尾帧、视频编辑、视频延长三类任务的画幅必须「智能」，视频编辑的时长必须「智能」——页面选到时会自动纠正并提示。</p>
+        <p><b>4a. 三档怎么选。</b>要 1080p、时长 15~30 秒、要 mov 输出、或者要用「视频编辑 / 视频延长」→ 只能 2.5。只要 720p 以内、时长 ≤15 秒，想省成本 → 2.0-mini / 2.0-fast（两者能力实测一致，差别在速度与报价）。参考素材上限也随档位变：2.5 图 ≤30 / 视频 ≤10 / 音频 ≤10（总时长 ≤30 秒），2.0 系列图 ≤9 / 视频 ≤3 / 音频 ≤3（总时长 ≤15 秒）——切档时已经加进去的素材如果超了该档上限，生成前会被拦下，请删掉多余的。<b>⚠️ 还有一个坑：2.0 标准版（<code>dreamina-seedance-2-0-260128</code>）会出现在 /models 清单里，但实测直接调用返 404 ModelNotOpen（账户未开通）——「清单里有」不等于「能调用」，所以没把它做成预设；你要用就先到控制台开通，再用「其他」手填。</b></p>
+        <p><b>4b. 没放上去的两个。</b>体验中心截图里的「生成数量（1 videos）」与「样片模式（Draft mode）」在 Ark 接口参数表里找不到对应字段——按「零售端有 ≠ API 有」的纪律，没依据就不放入口，以免你勾了以为生效、实际被上游静默忽略。</p>
+        <p><b>4c. 实测记录与仍未证实项。</b>已用真实 Key 经本页同一条中转链路跑过（三个 Model ID 均能建任务并出片，成片回包带可下载直链）：<b>已证实</b>——2.0-mini/fast 只到 720p（发 1080p 返 400）、时长 ≤15 秒（16/30 返 400）、<code>generate_audio</code> 在 2.0 也生效（发 false 回显 false）、<code>output_format</code> 在 2.0 只认 mp4（发 mov 返 400）、2.5 选 mov 确实输出 .mov、<code>return_last_frame</code> 与 <code>seed</code> 可被接受、单条参考视频超 15 秒会被上游拒（它先拉取、再探时长）。<b>仍未证实，页面不赌</b>——① <code>omnireference_tasktype</code> 的生效性：上游连非法取值都返 200（2.5 与 2.0 都是），不做校验，因此只能按官方参数表只对 2.5 下发，且“选了就一定按该类型跑”这句话页面不敢打包；② <code>seed</code> 能否真复现同一结果（需同种子跑两次比对）；③ 图≤9 / 视频≤3 / 音频≤3 这组素材数量上限仍按国内站官方矩阵，未逐条实测；④ 国际站与国内站参数集是否逐字段同构也无书面确认。</p>
+        <p><b>5. 异步任务。</b>一条片子通常要 1～5 分钟，页面自动轮询；刷新页面不会重复提交（不会重复计费）。<b>成片地址由上游提供，约 24 小时过期、有下载次数上限，请立刻下载保存。</b></p>
+        <p style="color:var(--warn)"><b>密钥安全：</b>API Key 只存在你自己浏览器的本地存储里（不勾选「记住」则关掉标签页即清空）。请求里的密钥随转发直达上游：本机模式下只经过你自己电脑上的脚本；线上模式会经过本站服务器做一次转发（服务器不记录密钥、不落请求头日志、不存副本）。公用电脑上请不要勾选「记住」。</p>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn primary" id="btnHelpClose">知道了</button></div>
+  </div>
+</div>
+
+<input type="file" id="filePick" accept="image/jpeg,image/png,image/webp,image/bmp,image/tiff,image/gif,image/heic,image/heif,video/mp4,video/quicktime,audio/mpeg,audio/mp4,audio/wav,audio/x-wav,audio/aac" multiple hidden />
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================================
+ * Seedance 视频创作台 · 单文件版
+ * 上游契约：POST {base}/contents/generations/tasks  创建任务
+ *          GET  {base}/contents/generations/tasks/{id}  查询任务
+ *          GET  {base}/models  连通性自检
+ * 说明：本文件独立于 MorAI 平台，零依赖、无构建。
+ * ========================================================================== */
+(function () {
+  'use strict';
+
+  var UPSTREAM = 'https://ark.ap-southeast.bytepluses.com/api/v3';
+  // 线上中转路径：必须与 nginx 站点配置里的 location 同名（改一处必同步另一处）
+  // 浏览器跨域由服务器转发解决；本机自用仍可由 proxy.mjs 提供 /ark 转发
+  var RELAY_PATH = '/sd-67862519-53330199';
+  var IS_LOCAL = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(location.origin);
+  var IS_ONLINE = /^https?:\/\//i.test(location.href) && !IS_LOCAL;
+  var DEFAULT_BASE = IS_ONLINE ? location.origin + RELAY_PATH
+    : (IS_LOCAL ? location.origin + '/ark' : UPSTREAM);
+  var DEFAULT_MODEL = 'dreamina-seedance-2-5-260628';
+  var MODEL_CUSTOM = '__custom__';
+  /* 模型能力表：切档位时参数必须联动收敛，否则给 2.0 档发 1080p、或给它发 mov，
+     就是一个必被上游拒的请求。口径来源登记在「说明」§4 / §4a / §4c。
+     下面每一项都用真实 Key 过了一遍上游（2026-10-01，测试 Key + 中转口），不是照文档抄的推断值：
+     · 2.5：480p/720p/1080p、时长 4~30；output_format 接受 mp4 与 mov（选 mov 回包文件确实是 .mov）
+     · 2.0-mini / 2.0-fast：480p 与 720p 实测可建、1080p 实测被拒（"resolution ... not valid"）；
+       时长 15 以内可建、16 与 30 实测被拒；generate_audio 实测生效（发 false 回显就是 false，默认 true）；
+       output_format 只认 mp4，发 mov 被拒（"the specified model does not support this output_format"）；
+       omnireference_tasktype 官方仅列在 2.5，且实测上游连非法取值都不校验（2.5 / 2.0 都照收），
+       无法证明它对 2.0 生效，因此 2.0 档不发；参考图/参考视频照发不受影响。
+     · 图≤9 / 视频≤3 / 音频≤3、总时长≤15 秒这组素材上限仍按国内站官方矩阵（见需求文档 V1.22），未逐条实测。
+     ⚠️ 预设只收录「已确认可调用」的三个 ID：2.0 标准版 dreamina-seedance-2-0-260128 虽然出现在 /models
+        清单里，但实测返回 404 ModelNotOpen（账户未开通）——清单里有 ≠ 能调用，故不写进预设。 */
+  var CAPS_25 = {
+    family: '2.5', res: ['480p', '720p', '1080p'],
+    dur: ['-1', '4', '5', '8', '10', '15', '20', '30'], maxDur: 30,
+    ref: { image: 30, video: 10, audio: 10 }, refTotalSec: 30,
+    taskType: true, generateAudio: true, formats: ['mp4', 'mov']
+  };
+  var CAPS_20 = {
+    family: '2.0', res: ['480p', '720p'],
+    dur: ['-1', '4', '5', '8', '10', '15'], maxDur: 15,
+    ref: { image: 9, video: 3, audio: 3 }, refTotalSec: 15,
+    taskType: false, generateAudio: true, formats: ['mp4']
+  };
+  /* 未收录的 ID：只发确定存在的公共字段，三个额外字段一个都不发（拿没核实过的字段去赌上游不报错，
+     赌输的代价是用户那条任务直接 400） */
+  var CAPS_RAW = Object.assign({}, CAPS_20, { taskType: false, generateAudio: false, formats: [] });
+  var MODELS = [
+    Object.assign({
+      id: 'dreamina-seedance-2-5-260628', name: 'Seedance 2.5', full: 'Dreamina-Seedance-2.5',
+      desc: '2.5 主力档：分辨率到 1080p、时长到 30 秒，独有「任务类型」字段与 mov 输出。'
+    }, CAPS_25),
+    Object.assign({
+      id: 'dreamina-seedance-2-0-fast-260128', name: 'Seedance 2.0-fast', full: 'Dreamina-Seedance-2.0-fast',
+      desc: '2.0 快速档：720p 到顶、时长 ≤15 秒；声音可关、格式只出 MP4，任务类型不发（实测依据见「说明」§4c）。'
+        + '报价（你控制台截图）：含视频输入 2.475 / 不含 4.2 USD/百万 tokens。'
+    }, CAPS_20),
+    Object.assign({
+      id: 'dreamina-seedance-2-0-mini-260615', name: 'Seedance 2.0-mini', full: 'Dreamina-Seedance-2.0-mini',
+      desc: '2.0 低价档：能力口径与 fast 同族（720p 到顶、时长 ≤15 秒、只出 MP4）；实测同参数下 token 并不比 2.5 少（5 秒 480p 纯文本：mini 50638 / 2.5 48437），省在单价上，单价以你控制台报价为准。'
+    }, CAPS_20),
+    { id: MODEL_CUSTOM, name: '其他（手动填写模型 ID）', custom: true, desc: '' }
+  ];
+
+  /** Model ID → 能力集：预设表优先，未收录的只按名字里的系列号归类（宁可给保守值） */
+  function modelCaps(id) {
+    id = id || DEFAULT_MODEL;
+    for (var i = 0; i < MODELS.length; i++) if (MODELS[i].id === id) return MODELS[i];
+    var base = /2[\s.-]?5/.test(id) ? CAPS_25 : CAPS_RAW;
+    return Object.assign({}, base, {
+      id: id, name: id, full: id, custom: true,
+      desc: '未收录的模型 ID，已按 ' + base.family + ' 系列的保守口径处理（分辨率/时长按该系列收敛，'
+        + '声音、输出格式、任务类型三个字段一律不发）。若它的实际能力不是这样，告诉我准确档位，我加进表里。'
+    });
+  }
+  function caps() { return modelCaps(settings.model); }
+  function modelLabel(id) { return modelCaps(id).name; }
+  var LS_KEY = 'seedance.settings.v1';
+  var LS_WORKS = 'seedance.works.v1';
+  var MAX_IMAGE_BYTES = 30 * 1024 * 1024;   // 上游：单张图片 < 30MB
+  var MAX_BODY_BYTES = 56 * 1024 * 1024;    // 上游：请求体 ≤ 64MB，留余量
+  /* 素材收件箱：上游 video_url / audio_url 只接受公网直链或 asset://、不收 Base64，
+     所以本地视频/音频必须先传到收件箱换回一条直链。本机由 proxy.mjs 提供，
+     线上由 nginx 提供，⚠️ 三处的路径必须同名（本页 / proxy.mjs / seedance-studio.conf） */
+  var INBOX_PATH = '/sd-inbox-67862519';
+  var INBOX_MAX_BYTES = 200 * 1024 * 1024;  // 上游：单个参考视频 ≤200MB
+  var INBOX_EXT = { mp4: 'video/mp4', mov: 'video/quicktime',
+                    mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav' };
+  var OK_EXT = { video: ['mp4', 'mov'], audio: ['mp3', 'wav', 'aac', 'm4a'] };
+  var MEDIA_MIN_SEC = 2;                      // 上游：参考素材单条 ≥2 秒
+  var PIXEL_MIN = 407696, PIXEL_MAX = 8295044; // 官方 2.0 系列口径，2.5 未书面确认 → 只提示不拦
+  var INBOX_TTL_HINT = '2 小时';               // 与服务器侧定时清理口径一致
+  var POLL_INTERVAL = 8000;
+  var POLL_TIMEOUT = 20 * 60 * 1000;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {};
+  ['bulb','connText','btnModel','btnCfg','btnHelp','modelLabel','works','worksMeta','assets','prompt',
+   'pResolution','pRatio','pDuration','pTaskType','pAudio','pFormat','pWatermark','pLastFrame','pSeed','btnGen','costHint',
+   'mCfg','fKey','fRemember','fBase','fModelSel','fModelCustom','modelHint','cfgMsg','btnTest','btnCfgClose','btnCfgSave','baseHint',
+   'mLink','fLinks','fLinkRole','btnLinkClose','btnLinkAdd','mHelp','btnHelpClose','filePick','toast'
+  ].forEach(function (k) { els[k] = $(k); });
+
+  /* ---------------------- 设置与存储 ---------------------- */
+  var settings = { base: DEFAULT_BASE, model: DEFAULT_MODEL, key: '' };
+
+  function loadSettings() {
+    var raw = null;
+    try { raw = localStorage.getItem(LS_KEY) || sessionStorage.getItem(LS_KEY); } catch (e) { raw = null; }
+    if (raw) {
+      try {
+        var o = JSON.parse(raw);
+        if (o && typeof o === 'object') {
+          settings.base = o.base || DEFAULT_BASE;
+          settings.model = o.model || DEFAULT_MODEL;
+          settings.key = o.key || '';
+        }
+      } catch (e) { /* 脏数据忽略 */ }
+    }
+  }
+
+  function saveSettings(remember) {
+    var payload = JSON.stringify(settings);
+    try {
+      localStorage.removeItem(LS_KEY);
+      sessionStorage.removeItem(LS_KEY);
+      if (remember) localStorage.setItem(LS_KEY, payload);
+      else sessionStorage.setItem(LS_KEY, payload);   // 密钥不落长期存储
+    } catch (e) { /* 隐私模式可能禁用存储 */ }
+  }
+
+  /* ---------------------- 作品（本地历史） ---------------------- */
+  var works = [];
+  function loadWorks() {
+    try {
+      var raw = localStorage.getItem(LS_WORKS);
+      var o = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(o)) works = o;
+    } catch (e) { works = []; }
+  }
+  function saveWorks() {
+    try {
+      // 只留 60 条；剔除体积大的临时字段（Base64 素材、待发送体、定时器句柄），否则 localStorage 必然超额
+      var slim = works.slice(0, 60).map(function (w) {
+        var c = Object.assign({}, w);
+        delete c._timer;
+        delete c.bodyForSend;
+        c.assets = (w.assets || []).map(function (a) {
+          return { kind: a.kind, name: a.name, role: a.role, ref: a.ref, inline: false, data: null };
+        });
+        return c;
+      });
+      localStorage.setItem(LS_WORKS, JSON.stringify(slim));
+    } catch (e) { /* 超配额忽略，内存态仍可用 */ }
+  }
+
+  /** 刷新页面后接管未完结的任务（上游任务仍在跑，不重新提交就不会重复计费） */
+  function resumePolling() {
+    works.forEach(function (w) {
+      if ((w.status === 'queued' || w.status === 'running') && w.taskId) {
+        poll(w);
+      } else if (w.status === 'submitting' || (w.status === 'queued' && !w.taskId)) {
+        w.status = 'fail';
+        w.error = '页面在任务完成前被刷新，这条任务的上游状态已无法确认（若当时已提交成功，它仍会在你的账户计费）。';
+      }
+    });
+  }
+
+  /* ---------------------- 小工具 ---------------------- */
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { els.toast.classList.remove('show'); }, 2600);
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtBytes(n) {
+    if (!n && n !== 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+    return (n / 1048576).toFixed(1) + ' MB';
+  }
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    var p = function (x) { return x < 10 ? '0' + x : '' + x; };
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function openModal(el) { el.classList.add('show'); }
+  function closeModal(el) { el.classList.remove('show'); }
+
+  /* ---------------------- 连接状态灯 ---------------------- */
+  function setConn(state, text) {
+    els.bulb.className = 'bulb' + (state ? ' ' + state : '');
+    els.connText.textContent = text;
+  }
+  function refreshHeader() {
+    var c = caps();
+    els.modelLabel.textContent = c.custom ? c.id : c.name;
+    els.btnModel.title = '当前模型：' + c.id + '（点这里可切换档位）';
+    setConn(settings.key ? '' : 'err', settings.key ? '已配置' : '缺少 API Key');
+  }
+
+  /* ---------------------- 模型档位与参数联动 ---------------------- */
+  var DUR_TEXT = { '-1': '智能', '4': '4s', '5': '5s', '8': '8s', '10': '10s', '15': '15s', '20': '20s', '30': '30s' };
+
+  function isPreset(id) {
+    return MODELS.some(function (m) { return !m.custom && m.id === id; });
+  }
+
+  /** 按能力表重建下拉选项；用户当前选中的值若该档仍支持则保留，否则收敛到该档默认值 */
+  function fillOptions(sel, values, def) {
+    var cur = sel.value;
+    sel.innerHTML = '';
+    values.forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = v;
+      o.textContent = DUR_TEXT[v] || v;
+      sel.appendChild(o);
+    });
+    sel.value = values.indexOf(cur) >= 0 ? cur : (values.indexOf(def) >= 0 ? def : values[0]);
+  }
+
+  /**
+   * 把当前档位的能力投射到底部控件：不支持的置灰禁用而不是隐藏（隐藏会让人找不到入口）。
+   * 两个开关型字段（任务类型 / 声音）不发就变灰；取值受限型字段（输出格式）用筛 option 表示，
+   * 因为 2.0 档开的是 mp4 这个值，不是整个字段。
+   * announce = 只在用户主动切档时弹一次白话告知，初始化/静默重排不打扰。
+   */
+  function setGrp(cap, on) {
+    var g = document.querySelector('.bar [data-cap="' + cap + '"]');
+    if (!g) return null;
+    var sel = g.querySelector('select');
+    g.classList.toggle('off', !on);
+    if (sel) sel.disabled = !on;
+    return sel;
+  }
+
+  function applyCaps(announce) {
+    var c = caps();
+    fillOptions(els.pResolution, c.res, c.res[c.res.length - 1]);
+    fillOptions(els.pDuration, c.dur, '-1');
+    // 输出格式：上游按档位收不同取值（2.5 开 mp4+mov，2.0 只开 mp4），所以这里筛值而不是关字段
+    fillOptions(els.pFormat, c.formats.length ? c.formats : ['mp4'], 'mp4');
+    var dropped = [];
+    var selTask = setGrp('taskType', !!c.taskType);
+    if (selTask && !c.taskType) { selTask.value = 'auto'; dropped.push('任务'); }
+    var selAudio = setGrp('generateAudio', !!c.generateAudio);
+    if (selAudio && !c.generateAudio) dropped.push('声音');
+    var selFmt = setGrp('outputFormat', c.formats.length > 0);
+    if (selFmt && !c.formats.length) dropped.push('格式');
+    if (announce) {
+      var msg = '已切到 ' + c.name + '：分辨率 ' + c.res.join('/') + '、时长≤' + c.maxDur
+        + ' 秒、素材 图≤' + c.ref.image + '/视频≤' + c.ref.video + '/音频≤' + c.ref.audio;
+      if (c.formats.length === 1) msg += '；输出只出 ' + c.formats[0].toUpperCase();
+      if (dropped.length) msg += '；' + dropped.join('/') + '变灰（不发上游）';
+      toast(msg);
+    }
+    return c;
+  }
+
+  function renderModelHint() {
+    var c = caps();
+    var txt = (c.desc ? c.desc + ' ' : '')
+      + '本档参数：分辨率 ' + c.res.join('/') + '｜时长 ' + c.dur.filter(function (v) { return v !== '-1'; }).join('/') + ' 秒或智能'
+      + '｜参考素材 图≤' + c.ref.image + ' / 视频≤' + c.ref.video + ' / 音频≤' + c.ref.audio + '（总时长≤' + c.refTotalSec + ' 秒）'
+      + '｜实际下发：' + (c.taskType ? '含 omnireference_tasktype' : '不发 omnireference_tasktype')
+      + '、' + (c.generateAudio ? '含 generate_audio' : '不发 generate_audio')
+      + '、' + (c.formats.length ? 'output_format 只收 ' + c.formats.join('/') : '不发 output_format');
+    els.modelHint.textContent = txt;
+  }
+
+  /** 把预设档位灌进下拉（含「其他」）；只在这一处拼 option，能力表改动不会漏同步 */
+  function buildModelOptions() {
+    els.fModelSel.innerHTML = '';
+    MODELS.forEach(function (m) {
+      var o = document.createElement('option');
+      o.value = m.id;
+      o.textContent = m.name;
+      els.fModelSel.appendChild(o);
+    });
+  }
+
+  /** 把弹层里的模型选择器对齐到 settings.model（预设直接选中，未收录的走「其他」+ 手填框） */
+  function syncModelField() {
+    var preset = isPreset(settings.model);
+    els.fModelSel.value = preset ? settings.model : MODEL_CUSTOM;
+    els.fModelCustom.style.display = preset ? 'none' : 'block';
+    els.fModelCustom.value = preset ? '' : settings.model;
+    renderModelHint();
+  }
+
+  function pickModelId() {
+    if (els.fModelSel.value !== MODEL_CUSTOM) return els.fModelSel.value;
+    return (els.fModelCustom.value || '').trim() || settings.model || DEFAULT_MODEL;
+  }
+
+  /* ---------------------- HTTP ---------------------- */
+  function apiUrl(path) {
+    var base = (settings.base || DEFAULT_BASE).replace(/\/+$/, '');
+    return base + path;
+  }
+
+  function request(method, path, body) {
+    var opt = {
+      method: method,
+      headers: { 'Authorization': 'Bearer ' + settings.key }
+    };
+    if (body !== undefined) {
+      opt.headers['Content-Type'] = 'application/json';
+      opt.body = JSON.stringify(body);
+    }
+    var url = apiUrl(path);
+    return fetch(url, opt).then(function (res) {
+      return res.text().then(function (txt) {
+        var ct = res.headers.get('content-type') || '';
+        var json = null;
+        try { json = txt ? JSON.parse(txt) : null; } catch (e) { json = null; }
+        if (!res.ok) {
+          var e = apiError(res.status, json, txt, url);
+          throw e;
+        }
+        // 转发规则没生效时，请求会被当成页面路径处理（回一叠 HTML 加 200），
+        // 不在此拦住就会变成「上游未返回任务 ID」这种看不出根因的错
+        if (!json && ct.indexOf('json') < 0) {
+          throw Object.assign(new Error('接口返回的不是 JSON'), {
+            userHint: '请求地址 ' + url + ' 返回了 HTTP ' + res.status + ' 的非 JSON 内容（' + (txt || '').slice(0, 60).replace(/\s+/g, ' ') + '）。'
+              + '通常是转发规则没生效、这个路径被当成普通页面处理了。'
+              + (IS_ONLINE ? '请确认服务器已 include seedance-studio.conf 并 nginx -t && reload。'
+                           : '请确认本机已在本目录执行 node proxy.mjs，并从 http://127.0.0.1:8790/ 打开本页。')
+          });
+        }
+        return json;
+      });
+    }).catch(function (err) {
+      if (err && err.userHint) throw err;
+      // fetch 抛 TypeError 基本等于「请求根本没发出去」：断网 / DNS / 跨域被拦
+      err.userHint = '请求没有发出去。' + (IS_ONLINE
+        ? '线上地址应由本站转发（' + DEFAULT_BASE + '）。若你改过「连接设置」里的接口地址，请清空它再保存；若刚部署完，请确认服务器已加载新的站点配置。'
+        : '最常见的原因是浏览器跨域（CORS）被上游拦截：请在本目录执行 node proxy.mjs，再用 http://127.0.0.1:8790/ 打开本页。')
+        + '\n原始错误：' + (err && err.message ? err.message : err);
+      throw err;
+    });
+  }
+
+  function apiError(status, json, txt, url) {
+    var code = json && json.error && json.error.code;
+    var msg = json && json.error && json.error.message;
+    if (!msg && json && json.message) msg = json.message;
+    var e = new Error(msg || ('HTTP ' + status));
+    e.status = status;
+    e.code = code;
+    e.body = txt;
+    // 把真实请求地址打出来：404 到底是「模型 ID 错」还是「这个端口上根本没有转发口」，一眼可分
+    e.userHint = 'HTTP ' + status + (code ? ' · ' + code : '') + (msg ? '\n' + msg : '')
+      + '\n请求地址：' + url + explain(status, code);
+    return e;
+  }
+
+  function explain(status, code) {
+    var c = (code || '').toLowerCase();
+    if (status === 401 || status === 403) return '\n→ API Key 无效或没有该模型的调用权限，请到控制台确认密钥与模型开通状态。';
+    if (status === 404) return c.indexOf('modelnotopen') >= 0
+      ? '\n→ 这个 Model ID 是存在的，但你的账户还没开通它的服务：到 BytePlus ModelArk 控制台开通后再调（实测 2.0 标准版就卡在这一步，而它照样出现在模型清单里——所以上面列到了也不代表能用）。'
+      : '\n→ 接口地址或模型 ID 不对，请核对 Base URL 与 Model ID。';
+    if (status === 429) return '\n→ 触发限流或账户余额不足，请稍后重试或检查账户。';
+    if (c.indexOf('insufficient') >= 0 || c.indexOf('balance') >= 0) return '\n→ 账户余额不足，请先在 BytePlus 充值。';
+    if (c.indexOf('invalidparameter') >= 0) return '\n→ 参数组合不合法：首帧/尾帧、视频编辑、视频延长三类任务的画幅必须为「智能」，视频编辑任务的时长必须为「智能」；若你手动指定了任务类型，提示词意图也必须与该类型一致。';
+    if (c.indexOf('content_filter') >= 0 || c.indexOf('policy') >= 0) return '\n→ 内容未通过安全审核，请调整提示词或素材。';
+    if (c.indexOf('media_') >= 0) return '\n→ 素材读取失败：请确认链接公网可直接访问、格式与时长在上游限制内。';
+    if (status >= 500) return '\n→ 上游服务异常，请稍后重试。';
+    return '';
+  }
+
+  /* ---------------------- 素材管理 ---------------------- */
+  var assets = [];
+  var assetSeq = 0;
+
+  var ROLE_BY_KIND = { image: 'reference_image', video: 'reference_video', audio: 'reference_audio' };
+  var KIND_BY_ROLE = {
+    reference_image: 'image', first_frame: 'image', last_frame: 'image',
+    reference_video: 'video', reference_audio: 'audio'
+  };
+  var ROLE_LABEL = {
+    reference_image: '参考图', first_frame: '首帧', last_frame: '尾帧',
+    reference_video: '参考视频', reference_audio: '参考音频'
+  };
+  var KIND_ICON = { image: '🖼', video: '🎬', audio: '🎵' };
+
+  function rolesFor(kind) {
+    if (kind === 'image') return ['reference_image', 'first_frame', 'last_frame'];
+    if (kind === 'video') return ['reference_video'];
+    return ['reference_audio'];
+  }
+
+  /** 按扩展名猜素材类型；猜不出时当图片（上游对图片接受 Base64，误判代价最低） */
+  function guessKind(u) {
+    if (/\.(jpe?g|png|webp|bmp|tiff?|gif|heic|heif)(\?|$)/i.test(u)) return 'image';
+    if (/\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(u)) return 'video';
+    if (/\.(mp3|wav|aac|m4a|flac|ogg)(\?|$)/i.test(u)) return 'audio';
+    return 'image';
+  }
+
+  function addAsset(a) {
+    a.id = ++assetSeq;
+    if (!a.role) a.role = ROLE_BY_KIND[a.kind];
+    assets.push(a);
+    renderAssets();
+  }
+
+  function renderAssets() {
+    els.assets.innerHTML = '';
+    assets.forEach(function (a) {
+      var chip = document.createElement('div');
+      chip.className = 'chip';
+      var vis = a.kind === 'image'
+        ? '<img src="' + esc(a.data || a.ref) + '" alt="" />'
+        : '<i class="vicon">' + (KIND_ICON[a.kind] || '🎬') + '</i>';
+      var opts = rolesFor(a.kind).map(function (r) {
+        return '<option value="' + r + '"' + (a.role === r ? ' selected' : '') + '>' + ROLE_LABEL[r] + '</option>';
+      }).join('');
+      chip.innerHTML = vis
+        + '<div style="min-width:0"><div class="nm" title="' + esc(a.name) + '">' + esc(a.name) + '</div>'
+        + '<div class="hint" style="font-size:10.5px">' + esc(a.note || (a.inline ? 'Base64 内嵌' : '链接引用')) + '</div></div>'
+        + '<select data-role="' + a.id + '">' + opts + '</select>'
+        + '<button class="x" data-del="' + a.id + '" title="移除">×</button>';
+      els.assets.appendChild(chip);
+    });
+    var addBtns = document.createElement('div');
+    addBtns.style.display = 'flex';
+    addBtns.style.gap = '8px';
+    addBtns.innerHTML = '<button class="add" id="pickFile">+ 本地文件</button>'
+      + '<button class="add" id="pickLink">+ 链接 / 素材ID</button>';
+    els.assets.appendChild(addBtns);
+    // 链接图片加载失败时给一个兑底占位（避免浏览器破图图标），已缓存失败的补上同一处理
+    Array.prototype.forEach.call(els.assets.querySelectorAll('img'), function (im) {
+      var fallback = function () {
+        if (!im.parentNode) return;
+        var i = document.createElement('i');
+        i.className = 'vicon';
+        i.textContent = '🖼';
+        i.title = '图片未能加载（检查链接是否公网可访问）';
+        im.parentNode.replaceChild(i, im);
+      };
+      im.addEventListener('error', fallback);
+      if (im.complete && im.naturalWidth === 0) fallback();
+    });
+  }
+
+  els.assets.addEventListener('change', function (ev) {
+    var sel = ev.target.closest && ev.target.closest('select[data-role]');
+    if (sel) {
+      var id = Number(sel.getAttribute('data-role'));
+      var a = assets.find(function (x) { return x.id === id; });
+      if (a) { a.role = sel.value; }
+    }
+  });
+  els.assets.addEventListener('click', function (ev) {
+    var t = ev.target;
+    if (t.id === 'pickFile') els.filePick.click();
+    else if (t.id === 'pickLink') { els.fLinks.value = ''; openModal(els.mLink); }
+    else if (t.dataset && t.dataset.del) {
+      var id = Number(t.dataset.del);
+      assets = assets.filter(function (x) { return x.id !== id; });
+      renderAssets();
+    }
+  });
+
+  function readFileAsDataUri(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(String(fr.result)); };
+      fr.onerror = function () { reject(new Error('文件读取失败：' + file.name)); };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /* ---------------------- 素材收件箱（本地视频 / 音频）---------------------- */
+
+  function canInbox() { return /^https?:\/\//i.test(location.href); }
+  function inboxUrl() { return location.origin + INBOX_PATH; }
+  function extOf(name) { var m = /\.([a-z0-9]+)$/i.exec(name || ''); return m ? m[1].toLowerCase() : ''; }
+
+  /** 文件名不可猜：收件箱是个无鉴权的写入口，靠 128 位随机名 + 只认白名单后缀兜底 */
+  function randName(ext) {
+    var hex = '';
+    if (window.crypto && window.crypto.getRandomValues) {
+      var b = new Uint8Array(16); window.crypto.getRandomValues(b);
+      for (var i = 0; i < b.length; i++) hex += ('0' + b[i].toString(16)).slice(-2);
+    } else {
+      for (var j = 0; j < 32; j++) hex += Math.floor(Math.random() * 16).toString(16);
+    }
+    return hex + '.' + ext;
+  }
+
+  /** 上传前先本地读时长与尺寸：超限的文件没必要白花几十秒传 200MB */
+  function probeMediaMeta(file) {
+    return new Promise(function (resolve, reject) {
+      var isAudio = String(file.type).indexOf('audio') >= 0;
+      var url = URL.createObjectURL(file);
+      var el = document.createElement(isAudio ? 'audio' : 'video');
+      var settled = false;
+      function finish(fn, arg) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer); URL.revokeObjectURL(url);
+        fn(arg);
+      }
+      // 部分编码（如某些 hevc mp4）浏览器根本解不出元数据；超时按「未知」放行，不因此拒用户文件
+      var timer = setTimeout(function () { finish(resolve, null); }, 8000);
+      el.preload = 'metadata';
+      el.onloadedmetadata = function () {
+        finish(resolve, { duration: Number(el.duration) || 0, width: el.videoWidth || 0, height: el.videoHeight || 0 });
+      };
+      el.onerror = function () {
+        // 读不出不等于文件非法：.mov / HEVC 在 Chrome 上经常解不出元数据，
+        // 在此拒掉就是误伤合法素材。改成「未预检、放行」，把判定交给上游
+        finish(resolve, null);
+      };
+      el.src = url;
+    });
+  }
+
+  function inboxUpload(file, name, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xr = new XMLHttpRequest();
+      xr.open('PUT', inboxUrl() + '/' + name, true);
+      xr.setRequestHeader('Content-Type', INBOX_EXT[extOf(name)] || 'application/octet-stream');
+      xr.timeout = 15 * 60 * 1000;
+      xr.upload.onprogress = function (ev) {
+        if (ev.lengthComputable && onProgress) onProgress(Math.round(ev.loaded * 100 / ev.total));
+      };
+      xr.onload = function () {
+        if (xr.status === 200 || xr.status === 201 || xr.status === 204) resolve();
+        else reject(new Error('上传失败 HTTP ' + xr.status + (xr.responseText ? '：' + String(xr.responseText).slice(0, 120) : '')));
+      };
+      xr.onerror = function () { reject(new Error('上传失败：连不上中转收件箱（本机请确认 proxy.mjs 在跑；线上请确认 nginx 收件箱规则已 reload）')); };
+      xr.ontimeout = function () { reject(new Error('上传超时，请重试或改贴公网直链')); };
+      xr.send(file);
+    });
+  }
+
+  /**
+   * 本地视频/音频 → 收件箱 → 直链素材。失败时把占位素材撤掉，不留下一个指向上的死链。
+   * 返回 {name,error} 交给调用方统一 toast。
+   */
+  function addLocalMedia(file, kind) {
+    var ext = extOf(file.name);
+    var label = kind === 'video' ? '视频' : '音频';
+    if (OK_EXT[kind].indexOf(ext) < 0) {
+      return Promise.resolve({ name: file.name, error: label + '只支持 ' + OK_EXT[kind].join(' / ') + '（上游格式限制），当前是 .' + (ext || '未知') });
+    }
+    if (file.size > INBOX_MAX_BYTES) {
+      return Promise.resolve({ name: file.name, error: label + '超过 200MB（上游单个素材上限），已跳过' });
+    }
+    if (!canInbox()) {
+      return Promise.resolve({ name: file.name, error: '双击打开本页时没有中转收件箱，本地' + label + '递不上去。请改用 http://127.0.0.1:8790/ 打开本页，或用「+ 链接 / 素材ID」贴公网直链' });
+    }
+    var cap = caps().refTotalSec;   // 官方：参考素材总时长 2.5 ≤30 秒 / 2.0 系列 ≤15 秒
+    return probeMediaMeta(file).then(function (m) {
+      var bad = '';
+      var ar = m && m.width && m.height ? m.width / m.height : 0;
+      if (m) {
+        if (m.duration && (m.duration < MEDIA_MIN_SEC || m.duration > cap)) {
+          bad = '时长 ' + m.duration.toFixed(1) + ' 秒，超出上游允许的 ' + MEDIA_MIN_SEC + '~' + cap + ' 秒';
+        } else if (ar && (ar < 0.4 || ar > 2.5)) {
+          bad = '宽高比 ' + ar.toFixed(2) + '，超出上游允许的 0.4~2.5（' + m.width + '×' + m.height + '）';
+        } else {
+          var total = assets.reduce(function (s, a) { return a.kind === kind ? s + (a.dur || 0) : s; }, 0) + (m.duration || 0);
+          if (total > cap + 0.5) bad = label + '总时长已达 ' + total.toFixed(1) + ' 秒，超过上游允许的 ' + cap + ' 秒';
+        }
+      }
+      if (bad) return { name: file.name, error: bad + '，已跳过（上游会直接拒收）' };
+
+      var name = randName(ext);
+      var a = { kind: kind, name: file.name, ref: inboxUrl() + '/' + name, inline: false,
+                role: ROLE_BY_KIND[kind], pending: true, dur: m ? m.duration : 0, note: '上传中 0%' };
+      addAsset(a);
+      if (m && m.width && m.height && (m.width * m.height < PIXEL_MIN || m.width * m.height > PIXEL_MAX)) {
+        toast('⚠️ 像素 ' + m.width + '×' + m.height + ' 超出官方 2.0 系列口径范围（2.5 未书面确认，先放行；若上游拒收请换素材）');
+      }
+      return inboxUpload(file, name, function (p) { a.note = '上传中 ' + p + '%'; renderAssets(); }).then(function () {
+        a.pending = false;
+        a.note = '中转直链 · ' + fmtBytes(file.size) + ' · 约 ' + INBOX_TTL_HINT + '后失效' + (m ? '' : ' · 未预检');
+        renderAssets();
+        return null;
+      }).catch(function (err) {
+        assets = assets.filter(function (x) { return x.id !== a.id; });
+        renderAssets();
+        return { name: file.name, error: err.message };
+      });
+    }).catch(function (err) {
+      return { name: file.name, error: err.message };
+    });
+  }
+
+  els.filePick.addEventListener('change', function () {
+    var files = Array.prototype.slice.call(els.filePick.files || []);
+    els.filePick.value = '';
+    if (!files.length) return;
+    // 串行处理：多个大文件并行上传会把本机带宽和收件箱一起挤爆，进度条也会串台
+    var bytes = 0;
+    var chain = Promise.resolve();
+    files.forEach(function (f) {
+      chain = chain.then(function () {
+        var kind = f.type.indexOf('video') >= 0 ? 'video' : (f.type.indexOf('audio') >= 0 ? 'audio' : 'image');
+        if (kind !== 'image') {
+          return addLocalMedia(f, kind).then(function (r) { if (r && r.error) toast(r.name + '：' + r.error); });
+        }
+        if (f.size > MAX_IMAGE_BYTES) { toast(f.name + '：图片超过 30MB（上游限制），已跳过'); return; }
+        return readFileAsDataUri(f).then(function (data) {
+          bytes += data.length;
+          if (bytes > MAX_BODY_BYTES) { toast(f.name + '：素材总量接近请求体上限（64MB），未添加'); return; }
+          addAsset({ kind: 'image', name: f.name, data: data, inline: true, ref: data, note: 'Base64 内嵌 · ' + fmtBytes(f.size) });
+        });
+      });
+    });
+  });
+
+  els.btnLinkAdd.addEventListener('click', function () {
+    var lines = els.fLinks.value.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!lines.length) { toast('请至少填写一个地址'); return; }
+    var role = els.fLinkRole.value;
+    lines.forEach(function (u) {
+      if (!/^(https?:\/\/|asset:\/\/|data:)/i.test(u)) { toast('已跳过无法识别的地址：' + u); return; }
+      // 人工指定了用途就按用途定类型（asset:// 没扩展名可猜），否则按后缀判
+      var kind = role === 'auto' ? guessKind(u) : KIND_BY_ROLE[role];
+      if (role !== 'auto' && !KIND_BY_ROLE[role]) kind = guessKind(u);
+      addAsset({ kind: kind, name: u.length > 34 ? u.slice(0, 24) + '…' + u.slice(-6) : u, ref: u,
+                 inline: false, note: '链接引用', role: role === 'auto' ? undefined : role });
+    });
+    closeModal(els.mLink);
+  });
+
+  /* ---------------------- 请求体构造 ---------------------- */
+
+  function buildBody() {
+    var c = caps();   // 当前档位能力集：分辨率/时长/素材数量/三个可发字段全部由它驱动
+    var prompt = els.prompt.value.trim();
+    if (!prompt && !assets.length) throw new Error('请至少填写提示词或添加一个参考素材');
+    var content = [];
+    if (prompt) content.push({ type: 'text', text: prompt });
+    assets.forEach(function (a) {
+      if (a.kind === 'image') {
+        content.push({ type: 'image_url', image_url: { url: a.ref }, role: a.role });
+      } else if (a.kind === 'video') {
+        content.push({ type: 'video_url', video_url: { url: a.ref }, role: 'reference_video' });
+      } else {
+        content.push({ type: 'audio_url', audio_url: { url: a.ref }, role: 'reference_audio' });
+      }
+    });
+
+    // 官方素材数量上限：2.5 图≤30 / 视频≤10 / 音频≤10；2.0 系列图≤9 / 视频≤3 / 音频≤3
+    var cap = c.ref;
+    var over = null;
+    [['image', '参考图'], ['video', '参考视频'], ['audio', '参考音频']].forEach(function (t) {
+      var n = assets.filter(function (a) { return a.kind === t[0]; }).length;
+      if (n > cap[t[0]] && !over) over = t[1] + '最多 ' + cap[t[0]] + ' 个（当前 ' + n + ' 个，档位 ' + c.name + '）';
+    });
+    if (over) throw new Error(over);
+
+    var ratio = els.pRatio.value;
+    var duration = Number(els.pDuration.value);
+    var taskType = els.pTaskType.value;
+    var frameMode = assets.some(function (a) { return a.role === 'first_frame' || a.role === 'last_frame'; });
+    var hasVideo = assets.some(function (a) { return a.kind === 'video'; });
+
+    if (taskType !== 'auto' && !c.taskType) {
+      throw new Error('任务类型（omnireference_tasktype）只给 Seedance 2.5 下发；当前档位（' + c.name + '）不认这个字段（实测上游对它不做取值校验，无法证明生效）。参考图 / 参考视频照样能传，不选这个也能做参考生成');
+    }
+    // 上游硬约束：首帧/首尾帧、视频编辑、视频延长三类任务的 ratio 必须 adaptive
+    if ((frameMode || taskType === 'edit' || taskType === 'extend') && ratio !== 'adaptive') {
+      ratio = 'adaptive';
+      els.pRatio.value = 'adaptive';
+      toast('已自动把画幅改为「智能」：' + (frameMode ? '首帧/尾帧' : '该任务类型') + '不允许指定固定画幅');
+    }
+    if (taskType === 'edit' && duration !== -1) {
+      duration = -1;
+      els.pDuration.value = '-1';
+      toast('已自动把时长改为「智能」：视频编辑任务的输出时长跟随原视频，不允许指定');
+    }
+    if ((taskType === 'edit' || taskType === 'extend') && !hasVideo) {
+      throw new Error('视频编辑 / 视频延长任务必须至少添加一个参考视频（公网直链或 asset://）');
+    }
+    var maxDur = c.maxDur;
+    if (duration !== -1 && (duration < 4 || duration > maxDur)) {
+      throw new Error(c.name + ' 的时长需为 4～' + maxDur + ' 秒，或选择「智能」');
+    }
+    if (c.res.indexOf(els.pResolution.value) < 0) {
+      throw new Error(c.name + ' 不支持 ' + els.pResolution.value + ' 分辨率（本档只到 ' + c.res[c.res.length - 1] + '）');
+    }
+
+    var body = { model: settings.model, content: content, ratio: ratio, duration: duration,
+                 resolution: els.pResolution.value, watermark: els.pWatermark.checked };
+    /* 三个额外字段都按能力表下发，口径来自实测而非文档推测：
+       generate_audio 三档全发（给 mini 发 false、查任务回显就是 false，已确认生效）；
+       output_format 只发该档认的取值（mini 发 mov 会直接 400）；
+       omnireference_tasktype 仍只给 2.5 发（上游连非法值都照收，对 2.0 无法证明生效，不赌） */
+    if (c.generateAudio) body.generate_audio = els.pAudio.value === 'true';
+    if (c.formats.length) {
+      if (c.formats.indexOf(els.pFormat.value) < 0) {
+        throw new Error(c.name + ' 只支持输出格式 ' + c.formats.join('/') + '（当前选的是 ' + els.pFormat.value + '）');
+      }
+      body.output_format = els.pFormat.value;
+    }
+    if (c.taskType && taskType !== 'auto') body.omnireference_tasktype = taskType;
+    if (els.pLastFrame.checked) body.return_last_frame = true;
+    var seed = els.pSeed.value;
+    if (seed !== '' && Number(seed) >= 0) body.seed = Math.floor(Number(seed));
+    return { body: body, frameMode: frameMode, hasVideo: hasVideo };
+  }
+
+  /* ---------------------- 任务提交与轮询 ---------------------- */
+  function newWork(body) {
+    var w = {
+      id: 'w' + Date.now() + Math.random().toString(36).slice(2, 6),
+      taskId: null, status: 'submitting', createdAt: Date.now(), finishedAt: null,
+      prompt: els.prompt.value.trim(), videoUrl: null, error: null, usage: null,
+      params: { resolution: body.resolution, ratio: body.ratio, duration: body.duration },
+      assets: assets.map(function (a) {
+        return { kind: a.kind, name: a.name, role: a.role, ref: a.ref, inline: a.inline,
+                 data: a.inline ? null : (a.data || null) };
+      })
+    };
+    works.unshift(w);
+    saveWorks();
+    renderWorks();
+    return w;
+  }
+
+  function submit(w) {
+    return request('POST', '/contents/generations/tasks', w.bodyForSend).then(function (json) {
+      var id = pickTaskId(json);
+      if (!id) throw Object.assign(new Error('上游未返回任务 ID'), { userHint: '上游返回 200 但没有 task_id，响应原文：\n' + JSON.stringify(json).slice(0, 500) });
+      w.taskId = id;
+      w.status = 'queued';
+      renderWorks();
+      saveWorks();
+      poll(w);
+    });
+  }
+
+  function pickTaskId(json) {
+    if (!json) return null;
+    return (json.data && (json.data.id || json.data.task_id)) || json.task_id || json.id || null;
+  }
+
+  function pickStatus(json) {
+    var d = (json && json.data) || json || {};
+    return String(d.status || d.state || '').toLowerCase();
+  }
+
+  function pickVideoUrl(json) {
+    var d = (json && json.data) || json || {};
+    var c = d.content;
+    if (typeof c === 'string' && /^https?:/i.test(c)) return c;
+    if (c && typeof c === 'object' && c.video_url) return String(c.video_url);
+    if (d.video_url) return String(d.video_url);
+    if (Array.isArray(d.video_info) && d.video_info[0] && d.video_info[0].url) return d.video_info[0].url;
+    return null;
+  }
+
+  var DONE = ['succeeded', 'success', 'completed', 'done'];
+  var FAIL = ['failed', 'error', 'cancelled', 'canceled'];
+
+  function poll(w) {
+    w._timer = setTimeout(function () {
+      if (Date.now() - w.createdAt > POLL_TIMEOUT) {
+        finish(w, 'timeout', null, '等待超过 20 分钟仍未完成。任务可能仍在上游排队，可稍后用任务 ID 查询。');
+        return;
+      }
+      request('GET', '/contents/generations/tasks/' + encodeURIComponent(w.taskId)).then(function (json) {
+        var st = pickStatus(json);
+        if (DONE.indexOf(st) >= 0) {
+          finish(w, 'done', pickVideoUrl(json), null, json);
+        } else if (FAIL.indexOf(st) >= 0) {
+          var em = (json && json.error && json.error.message) || st;
+          finish(w, 'fail', null, '上游任务失败：' + em + explain(0, (json && json.error && json.error.code) || st));
+        } else {
+          w.status = st === 'processing' || st === 'running' ? 'running' : 'queued';
+          renderWorks();
+          poll(w);
+        }
+      }).catch(function (err) {
+        finish(w, 'fail', null, err.userHint || err.message);
+      });
+    }, POLL_INTERVAL);
+  }
+
+  function finish(w, kind, videoUrl, error, raw) {
+    clearTimeout(w._timer);
+    w.finishedAt = Date.now();
+    if (kind === 'done') {
+      if (!videoUrl) { w.status = 'fail'; w.error = '任务已完成，但响应里没有视频地址：\n' + JSON.stringify(raw).slice(0, 500); }
+      else { w.status = 'done'; w.videoUrl = videoUrl; }
+    } else {
+      w.status = kind === 'timeout' ? 'timeout' : 'fail';
+      w.error = error;
+    }
+    saveWorks();
+    renderWorks();
+  }
+
+  /* ---------------------- 渲染作品 ---------------------- */
+  function statusBadge(w) {
+    if (w.status === 'done') return '<span class="badge ok">已完成</span>';
+    if (w.status === 'fail' || w.status === 'timeout') return '<span class="badge err">' + (w.status === 'timeout' ? '等待超时' : '失败') + '</span>';
+    return '<span class="badge run">' + (w.status === 'running' ? '生成中' : w.status === 'submitting' ? '提交中' : '排队中') + '</span>';
+  }
+
+  function renderWorks() {
+    if (!works.length) {
+      els.works.innerHTML = '<div class="empty"><h3>还没有作品</h3>'
+        + '<div>在下方填写提示词（可加参考图 / 参考视频），点「生成视频」。<br />上游是异步任务，一条片子通常要 1～5 分钟，页面会自动等待结果。</div></div>';
+      return;
+    }
+    var html = works.map(function (w) {
+      var live = w.status !== 'done' && w.status !== 'fail' && w.status !== 'timeout';
+      var elapsed = Math.round(((w.finishedAt || Date.now()) - w.createdAt) / 1000);
+      var thumb;
+      if (w.status === 'done' && w.videoUrl) {
+        thumb = '<video src="' + esc(w.videoUrl) + '" controls preload="metadata" playsinline></video>';
+      } else if (live) {
+        thumb = '<div class="ring"></div>';
+      } else {
+        thumb = '<div class="ph">未能生成视频</div>';
+      }
+      var meta = ['<i>' + esc(w.params.resolution || '—') + '</i>', '<i>' + esc(w.params.ratio || '—') + '</i>',
+                  '<i>' + (w.params.duration === -1 ? '智能时长' : esc(w.params.duration) + 's') + '</i>'];
+      if (w.assets && w.assets.length) meta.push('<i>素材 ' + w.assets.length + '</i>');
+      if (w.taskId) meta.push('<i>#' + esc(String(w.taskId).slice(-8)) + '</i>');
+      meta.push('<i>' + fmtTime(w.createdAt) + (live ? ' · 已等 ' + elapsed + 's' : '') + '</i>');
+
+      var btns = '';
+      if (w.status === 'done' && w.videoUrl) {
+        btns = '<a class="btn mini" href="' + esc(w.videoUrl) + '" target="_blank" rel="noopener">打开</a>'
+             + '<button class="btn mini" data-dl="' + esc(w.videoUrl) + '">下载</button>';
+      }
+      btns += '<button class="btn mini" data-again="' + w.id + '">复用参数</button>'
+            + '<button class="btn mini danger" data-rm="' + w.id + '">删除</button>';
+
+      return '<div class="card"><div class="thumb">' + statusBadge(w) + thumb + '</div>'
+        + '<div class="cbody">'
+        + (w.prompt ? '<div class="prompt">' + esc(w.prompt) + '</div>' : '<div class="prompt" style="color:var(--tx3)">（未填写文字提示词）</div>')
+        + '<div class="meta">' + meta.join('') + '</div>'
+        + (w.error ? '<div class="errbox">' + esc(w.error) + '</div>' : '')
+        + '<div class="row">' + btns + '</div>'
+        + '</div></div>';
+    }).join('');
+    els.works.innerHTML = '<div class="grid">' + html + '</div>';
+  }
+
+  els.works.addEventListener('click', function (ev) {
+    var t = ev.target.closest && ev.target.closest('button');
+    if (!t) return;
+    if (t.dataset.rm) {
+      var id = t.dataset.rm;
+      var w = works.find(function (x) { return x.id === id; });
+      if (w && w._timer) clearTimeout(w._timer);
+      works = works.filter(function (x) { return x.id !== id; });
+      saveWorks(); renderWorks();
+    } else if (t.dataset.again) {
+      reuse(t.dataset.again);
+    } else if (t.dataset.dl) {
+      download(t.dataset.dl);
+    }
+  });
+
+  function reuse(id) {
+    var w = works.find(function (x) { return x.id === id; });
+    if (!w) return;
+    els.prompt.value = w.prompt || '';
+    els.pResolution.value = w.params.resolution || '720p';
+    els.pRatio.value = w.params.ratio || 'adaptive';
+    els.pDuration.value = String(w.params.duration);
+    assets = (w.assets || []).map(function (a) {
+      var c = Object.assign({}, a);
+      c.note = c.inline ? 'Base64（已过期，需重新选择文件）' : '链接引用';
+      c.ref = c.inline ? '' : c.ref;
+      return c;
+    }).filter(function (a) { return !a.inline; });
+    renderAssets();
+    window.scrollTo(0, document.body.scrollHeight);
+    els.prompt.focus();
+    toast('参数已回填，可直接重新生成');
+  }
+
+  function download(url) {
+    fetch(url).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function (b) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'seedance-' + Date.now() + '.mp4';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    }).catch(function () {
+      toast('浏览器不允许直接下载（视频服务器跨域限制），已为你在新窗口打开');
+      window.open(url, '_blank', 'noopener');
+    });
+  }
+
+  /* ---------------------- 生成按钮 ---------------------- */
+  els.btnGen.addEventListener('click', function () {
+    if (!settings.key) { openCfg(); els.cfgMsg.textContent = '请先填写 API Key'; return; }
+    // 上传未完就提交，发出去的是一个还不存在的直链，上游只会回一个难查的下载失败
+    if (assets.some(function (a) { return a.pending; })) { toast('还有素材在上传中，请等它传完再生成'); return; }
+    if (assets.some(function (a) { return !a.ref; })) { toast('有素材没准备好（本地图片的 Base64 已过期），请重新选择文件'); return; }
+    var built;
+    try { built = buildBody(); } catch (e) { toast(e.message); return; }
+    if (!built.body.content.length) { toast('提示词不能为空'); return; }
+
+    els.btnGen.disabled = true;
+    var w = newWork(built.body);
+    w.bodyForSend = built.body;
+    submit(w).catch(function (err) {
+      finish(w, 'fail', null, err.userHint || err.message);
+    }).then(function () {
+      els.btnGen.disabled = false;
+    });
+  });
+
+  /* ---------------------- 连接设置弹层 ---------------------- */
+  function openCfg() {
+    els.fKey.value = settings.key;
+    els.fBase.value = settings.base;
+    syncModelField();
+    try { els.fRemember.checked = !!localStorage.getItem(LS_KEY); } catch (e) { els.fRemember.checked = false; }
+    els.cfgMsg.textContent = '';
+    openModal(els.mCfg);
+  }
+
+  els.btnCfg.addEventListener('click', openCfg);
+  els.btnCfgClose.addEventListener('click', function () { closeModal(els.mCfg); });
+  els.btnModel.addEventListener('click', openCfg);
+
+  els.btnHelp.addEventListener('click', function () { openModal(els.mHelp); });
+  els.btnHelpClose.addEventListener('click', function () { closeModal(els.mHelp); });
+  els.btnLinkClose.addEventListener('click', function () { closeModal(els.mLink); });
+  [els.mCfg, els.mLink, els.mHelp].forEach(function (m) {
+    m.addEventListener('click', function (ev) {
+      if (ev.target !== m) return;
+      // 还没有可用 Key 时，不允许点遮罩关掉设置弹层（否则一误点就必需重新找入口）
+      if (m === els.mCfg && !settings.key) { els.cfgMsg.textContent = '请先保存连接设置（或至少填好 API Key）再关闭。'; return; }
+      closeModal(m);
+    });
+  });
+
+  function collectCfg() {
+    settings.key = els.fKey.value.trim();
+    settings.base = (els.fBase.value.trim() || DEFAULT_BASE).replace(/\/+$/, '');
+    settings.model = pickModelId() || DEFAULT_MODEL;
+  }
+
+  /* 切档：预设直接选中，选「其他」则展开手填框；两个入口都重走一遍能力收敛，
+     把下拉项与灰置字段当场改到位（不能等到保存才改，否则用户看到的还是上一档的选项） */
+  els.fModelSel.addEventListener('change', function () {
+    var custom = els.fModelSel.value === MODEL_CUSTOM;
+    els.fModelCustom.style.display = custom ? 'block' : 'none';
+    if (custom && isPreset(settings.model)) els.fModelCustom.value = '';
+    settings.model = pickModelId();
+    applyCaps(true);
+    renderModelHint();
+    refreshHeader();
+    if (custom) els.fModelCustom.focus();
+  });
+  els.fModelCustom.addEventListener('input', function () {
+    settings.model = pickModelId();
+    applyCaps(false);
+    renderModelHint();
+    refreshHeader();
+  });
+
+  els.btnCfgSave.addEventListener('click', function () {
+    collectCfg();
+    saveSettings(els.fRemember.checked);
+    refreshHeader();
+    closeModal(els.mCfg);
+    toast('已保存');
+  });
+
+  els.btnTest.addEventListener('click', function () {
+    collectCfg();
+    if (!settings.key) { els.cfgMsg.textContent = '请先填写 API Key'; return; }
+    els.cfgMsg.textContent = '正在请求模型列表…';
+    request('GET', '/models').then(function (json) {
+      var list = (json && json.data) ? json.data : [];
+      var ids = list.map(function (m) { return String(m.id || m.model || ''); });
+      var hit = ids.indexOf(settings.model) >= 0;
+      // 把 Key 真正可用的 Seedance 档位列出来：能直接看出 2.0-fast / 2.0-mini 有没有开通
+      var sd = ids.filter(function (id) { return /seedance/i.test(id); }).sort();
+      els.cfgMsg.innerHTML = '✅ 连接成功，该 Key 可用模型 ' + ids.length + ' 个。'
+        + (hit ? '<br />当前档位已在列表中（注意：列表里有 ≠ 已开通，实测 2.0 标准版就在列表里但调用返 404 ModelNotOpen）。'
+               : '<br />⚠️ 列表里没找到 ' + esc(settings.model) + '，这一档肯定调不了（请核对 Model ID，或到控制台开通）。')
+        + (sd.length ? '<br />可用的 Seedance 档位：' + sd.map(function (x) {
+            return '<code' + (x === settings.model ? ' style="color:var(--brand)"' : '') + '>' + esc(x) + '</code>';
+          }).join('　') : '');
+      setConn('ok', '已连通');
+      saveSettings(els.fRemember.checked);
+      refreshHeader();
+    }).catch(function (err) {
+      els.cfgMsg.textContent = '❌ ' + (err.userHint || err.message);
+      setConn('err', '连接失败');
+    });
+  });
+
+  /* ---------------------- 本机转发自检 ---------------------- */
+  /**
+   * 只有 proxy.mjs 才提供 /ark 转发，但 IDEA 内置服务器（localhost:63342）同样命中本机判定，
+   * 不探一次就会把接口地址填到一个根本没有转发的端口上，表现为「404 → 接口地址或模型 ID 不对」
+   * 这种误导提示。探法：无鉴权打一次 /ark/models —— proxy.mjs 会转给上游得到 401，
+   * 普通静态服务器只能给 404。
+   */
+  function probeLocalRelay() {
+    if (!IS_LOCAL) return;
+    var auto = location.origin + '/ark';
+    fetch(auto + '/models', { headers: { Accept: 'application/json' } }).then(function (res) {
+      if (res.status === 404) relayMissing(auto);
+    }).catch(function () { relayMissing(auto); });
+  }
+
+  function relayMissing(auto) {
+    if (settings.base !== auto) return;   // 用户自己填的地址一律不动
+    settings.base = UPSTREAM;
+    els.fBase.value = settings.base;
+    var tip = '⚠️ 当前端口上没有转发服务（你是从 ' + location.origin + ' 打开本页的，不是 http://127.0.0.1:8790/）。'
+      + '请在本文件所在目录执行 node proxy.mjs，再用 http://127.0.0.1:8790/ 打开本页；'
+      + '或者直接用线上地址。接口地址已改回上游直连（浏览器会被跨域拦）。';
+    els.cfgMsg.textContent = tip;
+    toast('没检测到本机转发服务：请用 node proxy.mjs 打开本页');
+  }
+
+  /* ---------------------- 初始化 ---------------------- */
+  loadSettings();
+  loadWorks();
+  buildModelOptions();
+  applyCaps(false);
+  resumePolling();
+  probeLocalRelay();
+  els.baseHint.textContent = IS_ONLINE
+    ? '已自动指向本站转发地址：' + DEFAULT_BASE + '，无需改动（直连上游 ' + UPSTREAM + ' 会被浏览器跨域拦掉）。'
+    : '浏览器不能直连上游 ' + UPSTREAM + '（跨域限制）。本机自用请在本文件所在目录执行 node proxy.mjs，再用 http://127.0.0.1:8790/ 打开本页，这里会自动填成本机转发地址。';
+  renderAssets();
+  renderWorks();
+  refreshHeader();
+  if (!settings.key) setTimeout(openCfg, 400);
+
+  // 心跳刷新「已等 Ns」
+  setInterval(function () {
+    if (works.some(function (w) { return w.status === 'running' || w.status === 'queued' || w.status === 'submitting'; })) renderWorks();
+  }, 5000);
+
+  window.addEventListener('beforeunload', function (e) {
+    var busy = works.some(function (w) { return w.status === 'submitting' || w.status === 'queued' || w.status === 'running'; });
+    if (busy) { e.preventDefault(); e.returnValue = ''; }
+  });
+})();
+</script>
+</body>
+</html>

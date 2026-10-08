@@ -131,6 +131,18 @@
 3. **Our app is Python-only → no compilation needed**; robot already ships vendored aarch64 site-packages (numpy/opencv) per the video_call skill (`/home/run/tennis_coach_t1/vendor/aarch64/site-packages`).
 4. **Windows CRLF warning (section 3.5)**: added `.gitattributes` to the repo forcing LF for all text files (`*.sh/*.py/*.md/*.yaml/...`), per the vendor's recommendation for Windows-based teams.
 
+## 2026-10-08 — Phase 13: SeeDance API identified from the developer's web UI
+
+1. User's developer delivered `web/index.html` (79 KB) — a web UI for the Seedance video-generation model.
+2. Extracted the real API: Seedance runs on **BytePlus ModelArk** (`https://ark.ap-southeast.bytepluses.com/api/v3`);
+   endpoints `POST /contents/generations/tasks` (submit) and `GET /contents/generations/tasks/{id}` (status);
+   auth `Authorization: Bearer <API Key>`; tiers Seedance 2.5 / 2.0-fast / 2.0-mini (require console activation).
+3. The page needs a forwarder for browser CORS: online hosted version https://apivmorai.com/seedance/ or local
+   `node proxy.mjs` (not yet delivered; pending from the developer). The robot-side Python client needs neither —
+   it calls Ark server-side.
+4. API key handling: web page stores it in browser session/local storage (entered via UI); robot side reads
+   `SEEDANCE_API_KEY` from `D:\Qiyuan T1 Robotics project\.env`.
+
 ## Status & next steps
 
 | Item | Status |
