@@ -1,10 +1,12 @@
-"""iFlytek TTS (在线语音合成) — returns a WAV file (PCM16 16 kHz)."""
+"""iFlytek TTS (在线语音合成) — returns a WAV file (PCM16 16 kHz).
+
+Blocking websocket implementation (create_connection) - no threading races.
+"""
 from __future__ import annotations
 
 import base64
 import json
 import struct
-import threading
 
 import websocket  # websocket-client
 
@@ -40,56 +42,42 @@ class IflytekTTS:
 
     def synthesize(self, text: str, timeout: float = 30.0) -> bytes:
         """Returns WAV bytes for the given text."""
+        body = {
+            "common": {"app_id": self.cfg.iflytek_appid},
+            "business": {
+                "aue": "raw",
+                "auf": f"audio/L16;rate={SAMPLE_RATE}",
+                "vcn": self.cfg.tts_voice,
+                "tte": "UTF8",
+                "speed": 50,
+                "volume": 50,
+                "pitch": 50,
+            },
+            "data": {
+                "status": 2,
+                "text": base64.b64encode(text.encode("utf-8")).decode(),
+            },
+        }
+        url = build_ws_url(self.cfg.iflytek_api_key, self.cfg.iflytek_api_secret,
+                           TTS_HOST, TTS_PATH)
+        ws = websocket.create_connection(url, timeout=timeout)
         chunks: list[bytes] = []
-        done = threading.Event()
-        error: list[str] = []
-
-        def on_open(ws):
-            body = {
-                "common": {"app_id": self.cfg.iflytek_appid},
-                "business": {
-                    "aue": "raw",
-                    "auf": f"audio/L16;rate={SAMPLE_RATE}",
-                    "vcn": self.cfg.tts_voice,
-                    "tte": "UTF8",
-                    "speed": 50,
-                    "volume": 50,
-                    "pitch": 50,
-                },
-                "data": {
-                    "status": 2,
-                    "text": base64.b64encode(text.encode("utf-8")).decode(),
-                },
-            }
+        try:
             ws.send(json.dumps(body))
-
-        def on_message(ws, message):
-            msg = json.loads(message)
-            audio = (msg.get("data") or {}).get("audio")
-            if audio:
-                chunks.append(base64.b64decode(audio))
-            if (msg.get("data") or {}).get("status") == 2:
-                done.set()
-
-        def on_error(ws, exc):
-            error.append(str(exc))
-            done.set()
-
-        def on_close(ws, *args):
-            done.set()
-
-        ws = websocket.WebSocketApp(
-            build_ws_url(self.cfg.iflytek_api_key, self.cfg.iflytek_api_secret, TTS_HOST, TTS_PATH),
-            on_open=on_open, on_message=on_message, on_error=on_error, on_close=on_close,
-        )
-        runner = threading.Thread(target=ws.run_forever, daemon=True)
-        runner.start()
-        if not done.wait(timeout=timeout):
+            while True:
+                raw = ws.recv()
+                if not raw:
+                    break
+                msg = json.loads(raw)
+                if msg.get("code", 0) != 0:
+                    raise TtsError(f"TTS error {msg.get('code')}: {msg.get('message')}")
+                audio = (msg.get("data") or {}).get("audio")
+                if audio:
+                    chunks.append(base64.b64decode(audio))
+                if (msg.get("data") or {}).get("status") == 2:
+                    break
+        finally:
             ws.close()
-            raise TtsError("TTS timeout")
-        ws.close()
-        if error:
-            raise TtsError(f"TTS websocket error: {error[0]}")
         pcm = b"".join(chunks)
         if not pcm:
             raise TtsError("TTS returned no audio")

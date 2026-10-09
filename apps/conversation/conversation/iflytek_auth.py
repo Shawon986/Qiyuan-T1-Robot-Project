@@ -13,9 +13,14 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 
 
-def build_authorization(api_key: str, api_secret: str, host: str, path: str) -> str:
+def rfc1123_now() -> str:
+    return format_datetime(datetime.now(timezone.utc), usegmt=True)
+
+
+def build_authorization(api_key: str, api_secret: str, host: str, path: str,
+                        date: str | None = None) -> str:
     """Return the `authorization` header value for an iFlytek WebSocket API."""
-    date = format_datetime(datetime.now(timezone.utc), usegmt=True)
+    date = date or rfc1123_now()
     signature_origin = f"host: {host}\ndate: {date}\nGET {path} HTTP/1.1"
     digest = hmac.new(api_secret.encode(), signature_origin.encode(), hashlib.sha256).digest()
     signature = base64.b64encode(digest).decode()
@@ -27,9 +32,13 @@ def build_authorization(api_key: str, api_secret: str, host: str, path: str) -> 
 
 
 def build_ws_url(api_key: str, api_secret: str, host: str, path: str) -> str:
-    """Return the full wss:// URL with authorization and date query params."""
-    date = format_datetime(datetime.now(timezone.utc), usegmt=True)
-    auth = build_authorization(api_key, api_secret, host, path)
+    """Return the full wss:// URL with authorization and date query params.
+
+    ONE date is computed and used for both the signature and the query param
+    (a mismatch at a second boundary makes the server reject the connection).
+    """
+    date = rfc1123_now()
+    auth = build_authorization(api_key, api_secret, host, path, date=date)
     params = urllib.parse.urlencode(
         {"authorization": auth, "date": date, "host": host}
     )

@@ -41,6 +41,15 @@ class ConversationConfig:
             or env.get("DASHSCOPE_API_KEY")
             or env.get("SEEDANCE_API_KEY", "")
         )
+        # AIChain (AIUI overseas platform) - optional unified STT+NLU+TTS session
+        self.aichain_app_id = env.get("AICHAIN_APP_ID", "")
+        self.aichain_app_key = env.get("AICHAIN_APP_KEY", "")
+        self.aichain_sn = env.get("AICHAIN_SN", "qiyuan-t1-demo-001")
+        self.aichain_base = env.get("AICHAIN_BASE", "wss://aichain-sh.xfyun.cn")
+        self.aichain_stt_engine = env.get("AICHAIN_STT_ENGINE", "5")  # engine 5: 60+ langs incl. zh-HK
+        self.aichain_stt_language = env.get("AICHAIN_STT_LANGUAGE", "zh-HK")  # Cantonese
+        self.aichain_tts_voice_id = env.get("AICHAIN_TTS_VOICE_ID", "4")
+        self.aichain_nlu_enabled = env.get("AICHAIN_NLU_ENABLED", "1") == "1"
         # Behavior
         self.wake_words = [w for w in env.get("WAKE_WORDS", "机器人").split(",") if w]
         self.system_prompt = env.get(

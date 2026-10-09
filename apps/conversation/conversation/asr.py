@@ -1,8 +1,10 @@
-"""iFlytek IAT (语音听写流式版) ASR client — Cantonese via accent=cantonese."""
+"""iFlytek IAT (语音听写流式版) ASR client — Cantonese via accent=cantonese.
+
+Blocking websocket implementation (create_connection) - no threading races.
+"""
 from __future__ import annotations
 
 import json
-import threading
 from pathlib import Path
 
 import websocket  # websocket-client
@@ -41,39 +43,25 @@ class IflytekASR:
         if not chunks:
             raise AsrError(f"no audio data in {audio_path}")
         frames = build_iat_frames(chunks, self.cfg.iflytek_appid, self.cfg.asr_accent)
+        url = build_ws_url(self.cfg.iflytek_api_key, self.cfg.iflytek_api_secret,
+                           IAT_HOST, IAT_PATH)
+        ws = websocket.create_connection(url, timeout=timeout)
         pieces: list[str] = []
-        done = threading.Event()
-        error: list[str] = []
-
-        def on_open(ws):
+        try:
             for frame in frames:
                 ws.send(json.dumps(frame))
-
-        def on_message(ws, message):
-            msg = json.loads(message)
-            text = parse_iat_result(msg)
-            if text:
-                pieces.append(text)
-            if (msg.get("data") or {}).get("status") == 2:
-                done.set()
-
-        def on_error(ws, exc):
-            error.append(str(exc))
-            done.set()
-
-        def on_close(ws, *args):
-            done.set()
-
-        ws = websocket.WebSocketApp(
-            build_ws_url(self.cfg.iflytek_api_key, self.cfg.iflytek_api_secret, IAT_HOST, IAT_PATH),
-            on_open=on_open, on_message=on_message, on_error=on_error, on_close=on_close,
-        )
-        runner = threading.Thread(target=ws.run_forever, daemon=True)
-        runner.start()
-        if not done.wait(timeout=timeout):
+            while True:
+                raw = ws.recv()
+                if not raw:
+                    break
+                msg = json.loads(raw)
+                if msg.get("code", 0) != 0:
+                    raise AsrError(f"ASR error {msg.get('code')}: {msg.get('message')}")
+                text = parse_iat_result(msg)
+                if text:
+                    pieces.append(text)
+                if (msg.get("data") or {}).get("status") == 2:
+                    break
+        finally:
             ws.close()
-            raise AsrError("ASR timeout")
-        ws.close()
-        if error:
-            raise AsrError(f"ASR websocket error: {error[0]}")
         return "".join(pieces)
