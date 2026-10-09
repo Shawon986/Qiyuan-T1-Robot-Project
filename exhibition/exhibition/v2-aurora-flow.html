@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeeDance × 启元T1 | AI视频生成 · 极光版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+:root{
+  --bg:#050510;--bg2:#0a0a1a;--bg3:#0f0f24;
+  --aurora1:#00ffc8;--aurora2:#7b61ff;--aurora3:#ff6bca;--aurora4:#00b4ff;
+  --text:#f0f0f8;--text2:#8888aa;--text3:#444466;
+  --glass:rgba(10,10,26,.65);--glass2:rgba(15,15,36,.5);
+  --border:rgba(0,255,200,.08);--border2:rgba(123,97,255,.12);
+  --radius:16px;--radius2:20px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'Space Grotesk','Noto Sans SC',sans-serif}
+
+/* ===== Aurora Background ===== */
+.aurora-bg{position:fixed;inset:0;z-index:0;overflow:hidden;filter:blur(80px) saturate(1.5)}
+.aurora-blob{position:absolute;border-radius:50%;opacity:.15;animation:auroraFloat 20s ease-in-out infinite}
+.aurora-blob:nth-child(1){width:600px;height:400px;background:var(--aurora1);top:-10%;left:10%;animation-delay:0s}
+.aurora-blob:nth-child(2){width:500px;height:350px;background:var(--aurora2);top:20%;right:5%;animation-delay:-5s}
+.aurora-blob:nth-child(3){width:450px;height:300px;background:var(--aurora3);bottom:10%;left:30%;animation-delay:-10s}
+.aurora-blob:nth-child(4){width:550px;height:380px;background:var(--aurora4);top:50%;left:-5%;animation-delay:-15s}
+@keyframes auroraFloat{
+  0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}
+  25%{transform:translate(80px,-40px) scale(1.1) rotate(5deg)}
+  50%{transform:translate(-40px,60px) scale(.95) rotate(-3deg)}
+  75%{transform:translate(50px,30px) scale(1.05) rotate(4deg)}
+}
+
+/* Grid overlay */
+.grid-overlay{position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none}
+
+/* ===== Layout ===== */
+.app{position:relative;z-index:1;display:grid;grid-template-rows:80px 1fr 52px;height:100vh}
+
+/* ===== Header ===== */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 40px;
+  background:linear-gradient(180deg,rgba(5,5,16,.9),rgba(5,5,16,.5));
+  border-bottom:1px solid var(--border);backdrop-filter:blur(30px)}
+.header-left{display:flex;align-items:center;gap:18px}
+.logo-wrap{position:relative;width:44px;height:44px}
+.logo-bg{position:absolute;inset:0;border-radius:12px;
+  background:linear-gradient(135deg,var(--aurora1),var(--aurora2));opacity:.8;
+  animation:logoPulse 3s ease-in-out infinite}
+@keyframes logoPulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+.logo-letter{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;
+  justify-content:center;font-weight:700;font-size:20px;color:var(--bg)}
+.brand-text{font-size:22px;font-weight:600;letter-spacing:2px;
+  background:linear-gradient(90deg,var(--aurora1),var(--aurora2),var(--aurora3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-size:200% 100%;animation:brandShimmer 4s linear infinite}
+@keyframes brandShimmer{to{background-position:200% 0}}
+.header-center{display:flex;align-items:center;gap:14px}
+.header-line{width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--aurora1),transparent)}
+.product-label{font-size:13px;color:var(--text2);letter-spacing:3px;font-weight:400}
+.header-right{display:flex;align-items:center;gap:16px}
+.clock{font-size:15px;color:var(--text2);font-variant-numeric:tabular-nums;font-weight:300}
+.mode-badge{padding:5px 16px;border-radius:24px;font-size:11px;font-weight:500;letter-spacing:1px;
+  background:linear-gradient(135deg,rgba(0,255,200,.08),rgba(123,97,255,.08));
+  border:1px solid rgba(0,255,200,.2);color:var(--aurora1)}
+
+/* ===== Main ===== */
+.main{display:grid;grid-template-columns:400px 1fr;overflow:hidden}
+
+/* ===== Chat ===== */
+.chat{display:flex;flex-direction:column;background:var(--glass);
+  border-right:1px solid var(--border);backdrop-filter:blur(20px)}
+.chat-head{padding:24px 28px 18px}
+.chat-head h3{font-size:12px;font-weight:600;letter-spacing:4px;text-transform:uppercase;
+  background:linear-gradient(90deg,var(--aurora1),var(--aurora4));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.chat-head p{font-size:11px;color:var(--text3);letter-spacing:1px}
+.messages{flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:14px;
+  scrollbar-width:thin;scrollbar-color:rgba(0,255,200,.15) transparent}
+.messages::-webkit-scrollbar{width:2px}
+.messages::-webkit-scrollbar-thumb{background:rgba(0,255,200,.2);border-radius:1px}
+
+.msg{max-width:85%;animation:fadeSlide .5s cubic-bezier(.16,1,.3,1)}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+.msg-left{align-self:flex-start}
+.msg-right{align-self:flex-end}
+.msg-sender{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;padding-left:2px}
+.msg-left .msg-sender{color:var(--aurora4)}
+.msg-right .msg-sender{color:var(--aurora1)}
+.msg-content{padding:16px 20px;border-radius:var(--radius);font-size:14px;line-height:1.7}
+.msg-left .msg-content{background:rgba(0,180,255,.05);border:1px solid rgba(0,180,255,.1);
+  border-bottom-left-radius:4px}
+.msg-right .msg-content{background:rgba(0,255,200,.04);border:1px solid rgba(0,255,200,.1);
+  border-bottom-right-radius:4px}
+.msg-ts{font-size:9px;color:var(--text3);margin-top:5px;text-align:right}
+
+.typing-dots{align-self:flex-end;display:flex;gap:5px;padding:16px 20px}
+.typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--aurora1);opacity:.3;
+  animation:dotBounce 1.4s infinite}
+.typing-dots i:nth-child(2){animation-delay:.2s}
+.typing-dots i:nth-child(3){animation-delay:.4s}
+@keyframes dotBounce{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+/* ===== Display ===== */
+.display{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+/* Standby */
+.standby{display:flex;flex-direction:column;align-items:center;gap:36px;text-align:center;
+  animation:standbyIn 1s ease}
+@keyframes standbyIn{from{opacity:0}to{opacity:1}}
+.standby-ring{width:190px;height:190px;border-radius:50%;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  animation:orbFloat 6s ease-in-out infinite}
+.standby-ring::before{content:'';position:absolute;inset:0;border-radius:50%;
+  border:2px solid transparent;border-top-color:var(--aurora1);border-right-color:var(--aurora2);
+  animation:ringRotate 4s linear infinite;
+  filter:drop-shadow(0 0 6px rgba(0,255,200,.35))}
+.standby-ring::after{content:'';position:absolute;inset:12px;border-radius:50%;
+  border:1px solid transparent;border-bottom-color:var(--aurora3);border-left-color:var(--aurora4);
+  animation:ringRotate 3s linear infinite reverse}
+@keyframes ringRotate{to{transform:rotate(360deg)}}
+@keyframes orbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.03)}}
+.standby-icon{font-size:52px;z-index:1;filter:drop-shadow(0 0 24px rgba(0,255,200,.45))}
+.standby h2{font-size:32px;font-weight:300;letter-spacing:8px;
+  background:linear-gradient(90deg,var(--aurora1),var(--aurora2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.standby p{font-size:14px;color:var(--text2);line-height:2;max-width:420px}
+.standby-cta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--aurora1);letter-spacing:2px}
+.standby-cta .dot{width:6px;height:6px;border-radius:50%;background:var(--aurora1);
+  box-shadow:0 0 10px var(--aurora1);animation:ctaPulse 2s ease-in-out infinite}
+@keyframes ctaPulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Progress */
+.progress-view{display:none;flex-direction:column;align-items:center;justify-content:center;gap:44px;width:100%;padding:40px}
+.progress-view.active{display:flex}
+.progress-view h2{font-size:18px;font-weight:300;letter-spacing:6px;color:var(--text2)}
+.ring-container{position:relative;width:240px;height:240px}
+.ring-track{fill:none;stroke:rgba(255,255,255,.03);stroke-width:4}
+.ring-progress{fill:none;stroke:url(#auroraGrad);stroke-width:4;stroke-linecap:round;
+  transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1);
+  filter:drop-shadow(0 0 12px rgba(0,255,200,.4))}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-size:56px;font-weight:200;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,var(--text),var(--text2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.ring-stage{font-size:11px;color:var(--text3);letter-spacing:3px;margin-top:6px}
+
+.pipeline{display:flex;align-items:center;gap:0;width:100%;max-width:640px}
+.pipe-node{flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;position:relative}
+.pipe-dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--text3);background:var(--bg);
+  transition:all .6s cubic-bezier(.4,0,.2,1);position:relative;z-index:2}
+.pipe-node.active .pipe-dot{border-color:var(--aurora1);background:var(--aurora1);
+  box-shadow:0 0 20px rgba(0,255,200,.5),0 0 40px rgba(0,255,200,.2)}
+.pipe-node.done .pipe-dot{border-color:var(--aurora2);background:var(--aurora2);
+  box-shadow:0 0 14px rgba(123,97,255,.4)}
+.pipe-label{font-size:10px;color:var(--text3);letter-spacing:2px;font-weight:500;transition:color .5s}
+.pipe-node.active .pipe-label{color:var(--aurora1)}
+.pipe-node.done .pipe-label{color:var(--aurora2)}
+.pipe-line{position:absolute;top:8px;left:calc(50% + 14px);right:calc(-50% + 14px);height:2px;
+  background:rgba(255,255,255,.04);z-index:1;overflow:hidden}
+.pipe-node.done .pipe-line{background:linear-gradient(90deg,var(--aurora2),var(--aurora1))}
+.pipe-node:last-child .pipe-line{display:none}
+.progress-info{font-size:13px;color:var(--text3);text-align:center;min-height:20px;letter-spacing:.5px}
+
+/* Complete */
+.complete-view{display:none;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+.complete-view.active{display:flex}
+.check-orb{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle,rgba(0,255,200,.12),transparent);
+  border:2px solid var(--aurora1);box-shadow:0 0 40px rgba(0,255,200,.2);
+  animation:checkPop .7s cubic-bezier(.16,1,.3,1)}
+@keyframes checkPop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}}
+.check-orb svg{width:40px;height:40px;stroke:var(--aurora1);stroke-width:2;fill:none}
+.complete-view h2{font-size:26px;font-weight:300;letter-spacing:6px;color:var(--aurora1)}
+.complete-view p{font-size:13px;color:var(--text3);letter-spacing:1px}
+
+/* Video */
+.video-view{display:none;width:100%;height:100%;position:relative;background:#000}
+.video-view.active{display:flex;align-items:center;justify-content:center}
+.video-view video{width:100%;height:100%;object-fit:contain}
+.video-bar{position:absolute;bottom:0;left:0;right:0;padding:20px 32px;
+  background:linear-gradient(transparent,rgba(0,0,0,.85));display:flex;align-items:center;justify-content:space-between}
+.video-tag{padding:6px 18px;border-radius:24px;font-size:11px;font-weight:500;letter-spacing:1px;
+  background:rgba(0,255,200,.08);border:1px solid rgba(0,255,200,.2);color:var(--aurora1)}
+.video-note{font-size:11px;color:var(--text3)}
+
+/* ===== Footer ===== */
+.footer{display:flex;align-items:center;justify-content:space-between;padding:0 40px;
+  background:rgba(5,5,16,.85);border-top:1px solid var(--border);backdrop-filter:blur(20px)}
+.f-group{display:flex;align-items:center;gap:24px}
+.f-item{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--text3);letter-spacing:1px}
+.f-dot{width:5px;height:5px;border-radius:50%}
+.f-dot.ok{background:var(--aurora1);box-shadow:0 0 8px rgba(0,255,200,.5)}
+.f-dot.err{background:#ff4466;box-shadow:0 0 8px rgba(255,68,102,.5)}
+.f-center{font-size:10px;color:var(--text3);letter-spacing:2px}
+
+@media(max-width:1100px){.main{grid-template-columns:300px 1fr}}
+@media(max-width:800px){.main{grid-template-columns:1fr}.chat{display:none}}
+
+/* ===== Hidden Control Panel ===== */
+.ctrl-toggle{position:fixed;bottom:64px;right:16px;z-index:9999;width:36px;height:36px;
+  border-radius:50%;border:1px solid rgba(0,255,200,.2);background:rgba(5,5,16,.85);
+  color:var(--aurora1);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  opacity:.25;transition:opacity .3s;backdrop-filter:blur(8px)}
+.ctrl-toggle:hover{opacity:1}
+.ctrl-panel{position:fixed;bottom:64px;right:16px;z-index:9998;width:340px;
+  background:rgba(5,5,16,.95);border:1px solid rgba(0,255,200,.15);border-radius:var(--radius2);
+  backdrop-filter:blur(20px);padding:20px;display:none;flex-direction:column;gap:14px;
+  box-shadow:0 8px 40px rgba(0,0,0,.6)}
+.ctrl-panel.open{display:flex}
+.ctrl-title{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--aurora1);
+  display:flex;align-items:center;justify-content:space-between}
+.ctrl-title span{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:none}
+.ctrl-input{width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,255,200,.15);
+  background:rgba(255,255,255,.03);color:var(--text);font-size:14px;font-family:inherit;outline:none;
+  transition:border-color .3s}
+.ctrl-input:focus{border-color:var(--aurora1)}
+.ctrl-input::placeholder{color:var(--text3)}
+.ctrl-btns{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl-btn{padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.03);color:var(--text2);font-size:11px;cursor:pointer;
+  font-family:inherit;transition:all .2s;letter-spacing:.5px}
+.ctrl-btn:hover{background:rgba(0,255,200,.08);border-color:rgba(0,255,200,.25);color:var(--aurora1)}
+.ctrl-btn.primary{background:rgba(0,255,200,.1);border-color:rgba(0,255,200,.25);color:var(--aurora1)}
+.ctrl-btn.primary:hover{background:rgba(0,255,200,.18)}
+.ctrl-btn.danger{border-color:rgba(255,68,102,.2);color:#ff4466}
+.ctrl-btn.danger:hover{background:rgba(255,68,102,.08)}
+.ctrl-sep{height:1px;background:rgba(255,255,255,.04)}
+.ctrl-hint{font-size:10px;color:var(--text3);line-height:1.6}
+.ctrl-hint kbd{padding:1px 5px;border-radius:3px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.05);font-size:9px;font-family:inherit}
+.ctrl-history{max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;
+  scrollbar-width:thin;scrollbar-color:rgba(0,255,200,.15) transparent}
+.ctrl-history::-webkit-scrollbar{width:2px}
+.ctrl-history::-webkit-scrollbar-thumb{background:rgba(0,255,200,.2);border-radius:1px}
+.hist-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;
+  border:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.02);cursor:pointer;
+  transition:all .2s;font-size:12px;color:var(--text2)}
+.hist-item:hover{background:rgba(0,255,200,.06);border-color:rgba(0,255,200,.2);color:var(--aurora1)}
+.hist-item .hist-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-item .hist-del{opacity:0;font-size:14px;color:var(--text3);cursor:pointer;
+  padding:0 4px;transition:opacity .2s,color .2s;flex-shrink:0}
+.hist-item:hover .hist-del{opacity:1}
+.hist-item .hist-del:hover{color:#ff4466}
+.hist-empty{font-size:11px;color:var(--text3);text-align:center;padding:8px}
+.ctrl-panel{max-height:calc(100vh - 130px);overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="aurora-bg">
+  <div class="aurora-blob"></div><div class="aurora-blob"></div>
+  <div class="aurora-blob"></div><div class="aurora-blob"></div>
+</div>
+<div class="grid-overlay"></div>
+
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-wrap"><div class="logo-bg"></div><div class="logo-letter">S</div></div>
+      <span class="brand-text">SeeDance</span>
+    </div>
+    <div class="header-center">
+      <div class="header-line"></div>
+      <span class="product-label">启元 T1 · AI VIDEO GENERATION</span>
+      <div class="header-line"></div>
+    </div>
+    <div class="header-right">
+      <span class="mode-badge">EXHIBITION MODE</span>
+      <span class="clock" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="chat">
+      <div class="chat-head">
+        <h3>Live Dialogue</h3>
+        <p>实时语音交互记录 · Voice Interaction</p>
+      </div>
+      <div class="messages" id="messages"></div>
+    </div>
+
+    <div class="display">
+      <!-- Standby -->
+      <div class="standby" id="viewStandby">
+        <div class="standby-ring">
+          <div class="standby-icon">🎬</div>
+        </div>
+        <h2>AI VIDEO STUDIO</h2>
+        <p>向启元 T1 机器人说出您的视频创意<br>SeeDance 会把它变成一段电影感画面</p>
+        <div class="standby-cta"><div class="dot"></div>等待语音指令中 · LISTENING</div>
+      </div>
+
+      <!-- Progress -->
+      <div class="progress-view" id="viewProgress">
+        <h2>GENERATING</h2>
+        <div class="ring-container">
+          <svg width="240" height="240" viewBox="0 0 240 240">
+            <defs>
+              <linearGradient id="auroraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00ffc8"/><stop offset="50%" stop-color="#7b61ff"/>
+                <stop offset="100%" stop-color="#ff6bca"/>
+              </linearGradient>
+            </defs>
+            <circle class="ring-track" cx="120" cy="120" r="108"/>
+            <circle class="ring-progress" id="ring" cx="120" cy="120" r="108"
+              stroke-dasharray="678.6" stroke-dashoffset="678.6" transform="rotate(-90 120 120)"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-pct" id="pct">0%</div>
+            <div class="ring-stage" id="stageLabel">QUEUED</div>
+          </div>
+        </div>
+        <div class="pipeline" id="pipeline">
+          <div class="pipe-node" data-s="0"><div class="pipe-dot"></div><div class="pipe-label">排队中</div><div class="pipe-line"></div></div>
+          <div class="pipe-node" data-s="1"><div class="pipe-dot"></div><div class="pipe-label">生成中</div><div class="pipe-line"></div></div>
+          <div class="pipe-node" data-s="2"><div class="pipe-dot"></div><div class="pipe-label">渲染中</div><div class="pipe-line"></div></div>
+          <div class="pipe-node" data-s="3"><div class="pipe-dot"></div><div class="pipe-label">完成</div></div>
+        </div>
+        <div class="progress-info" id="info">正在初始化...</div>
+      </div>
+
+      <!-- Complete -->
+      <div class="complete-view" id="viewComplete">
+        <div class="check-orb"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2>GENERATION COMPLETE</h2>
+        <p>视频生成完毕，即将自动播放...</p>
+      </div>
+
+      <!-- Video -->
+      <div class="video-view" id="viewVideo">
+        <video id="vid" playsinline></video>
+        <div class="video-bar">
+          <span class="video-tag">SeeDance AI Generated</span>
+          <span class="video-note">播放结束后自动返回待机</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="f-group">
+      <div class="f-item"><div class="f-dot ok" id="dotSys"></div><span id="lblSys">系统在线</span></div>
+      <div class="f-item"><div class="f-dot ok" id="dotWifi"></div><span>WiFi</span></div>
+      <div class="f-item"><div class="f-dot ok" id="dotRobot"></div><span id="lblRobot">T1 机器人</span></div>
+    </div>
+    <div class="f-center">SeeDance × PrimeBot · Powered by AI</div>
+    <div class="f-group">
+      <div class="f-item">v1.0.0</div>
+      <div class="f-item" id="lblMode">在线模式</div>
+    </div>
+  </footer>
+</div>
+
+<!-- Control Panel Toggle -->
+<button class="ctrl-toggle" id="ctrlToggle" title="控制面板 (~)">⚙</button>
+<!-- Control Panel -->
+<div class="ctrl-panel" id="ctrlPanel">
+  <div class="ctrl-title">控制面板 <span>按 ~ 隐藏</span></div>
+  <input class="ctrl-input" id="ctrlInput" type="text" placeholder="输入访客说的话，回车发送..." autocomplete="off">
+  <div class="ctrl-btns">
+    <button class="ctrl-btn primary" id="btnSend">发送指令</button>
+    <button class="ctrl-btn" id="btnAutoDemo">自动演示</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-title" style="font-size:10px">阶段跳转</div>
+  <div class="ctrl-btns">
+    <button class="ctrl-btn" onclick="jumpTo('standby')">待机</button>
+    <button class="ctrl-btn" onclick="jumpTo('queue')">排队中</button>
+    <button class="ctrl-btn" onclick="jumpTo('gen')">生成中</button>
+    <button class="ctrl-btn" onclick="jumpTo('render')">渲染中</button>
+    <button class="ctrl-btn" onclick="jumpTo('complete')">完成</button>
+    <button class="ctrl-btn" onclick="jumpTo('video')">播放视频</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-title" style="font-size:10px">就绪模拟 <span id="modeTag" style="font-size:9px;color:var(--text3)"></span></div>
+  <div class="ctrl-btns">
+    <button class="ctrl-btn primary" onclick="simulateReady()">模拟视频就绪</button>
+    <button class="ctrl-btn" onclick="pollNow()">立即问一次</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-title" style="font-size:10px">历史记录 <span id="histCount" style="font-size:9px;color:var(--text3)"></span></div>
+  <div class="ctrl-history" id="histList"></div>
+  <div class="ctrl-btns"><button class="ctrl-btn danger" onclick="clearHistory()" style="font-size:10px;padding:4px 10px">清空历史</button></div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-btns"><button class="ctrl-btn danger" onclick="resetAll()">重置全部</button></div>
+  <div class="ctrl-hint"><kbd>~</kbd> 显示/隐藏 · <kbd>Enter</kbd> 发送 · <kbd>Esc</kbd> 关闭</div>
+</div>
+
+<!-- 现场密钥与机器人地址：本文件不进 Git（见 .gitignore），缺失时 direct 模式自动走离线兜底片 -->
+<script src="ark-config.js"></script>
+<script>
+// Clock
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+
+// ===== 对话气泡 =====
+const chatEl=document.getElementById('messages');
+// 历史不清屏：观众看到的是连续对话；只留最近这些条，防大屏连跑一整天 DOM 无限增长
+const MAX_MSG=80;
+// 访客原话来自机器人语音转写，属不可信输入，进 DOM 前必须转义（防 XSS）
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function addMsg(role,text,time){
+  const side=role==='user'?'left':'right';
+  if(role==='user')lastUserText=String(text||'');   // 记住观众原话：收尾语此刻才触发，靠它判语言
+  const d=document.createElement('div');d.className=`msg msg-${side}`;
+  const t=time||new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML=`<div class="msg-sender">${side==='left'?'访客 Visitor':'T1 Robot'}</div>
+    <div class="msg-content">${esc(text)}</div><div class="msg-ts">${esc(t)}</div>`;
+  chatEl.appendChild(d);chatEl.scrollTop=chatEl.scrollHeight;
+  while(chatEl.children.length>MAX_MSG)chatEl.firstChild.remove();
+}
+function typing(on){
+  if(on){const d=document.createElement('div');d.className='typing-dots';d.id='tdots';
+    d.innerHTML='<i></i><i></i><i></i>';chatEl.appendChild(d);chatEl.scrollTop=chatEl.scrollHeight}
+  else{const el=document.getElementById('tdots');if(el)el.remove()}
+}
+
+// ---- 机器人应答话术池 ----
+// 只有一句台词的话，第三位观众就能看出大屏是录好的；按观众语言挑一条、且不跟上一条撞。
+// 文案直接改这里的数组即可，条数越多越不像模板。
+const BOT_LINES={
+  reply:{
+    zh:['好的，我已收到您的请求，正在为您生成视频，请稍候。','收到！我这就开始构思画面，请您稍等一会儿。','明白，正在把您描述的场景交给 SeeDance 生成。','这个画面听起来很有意思，我做完一段就放给您看。','好的，视频正在生成中，好了我第一时间放到大屏上。'],
+    en:['Got it — I\'m generating your video now, please wait a moment.','Understood! Let me start picturing that — give me a little time.','Nice idea. Sending it to SeeDance now, one moment please.','Interesting scene — I\'ll show it to you as soon as it\'s cut.','Received — I\'ll put it on the big screen the moment it\'s ready.'],
+    id:['Dimengerti — saya sedang membuat video Anda, mohon tunggu sebentar.','Baik! Saya mulai menyusun gambarnya, mohon tunggu sedikit waktu.','Ide yang bagus. Sedang saya kirim ke SeeDance, mohon tunggu.','Adegan yang menarik — saya putar di layar begitu selesai.','Diterima — begitu jadi, langsung saya tampilkan di layar besar.']
+  },
+  submitted:{
+    zh:['视频生成任务已提交至 SeeDance 平台。','画面正在渲染中，请稍候。','已进入生成队列，马上开始出片。'],
+    en:['Task submitted to SeeDance — rendering now.','Your video is in the render queue.','Generation started, frames coming together.'],
+    id:['Tugas dikirim ke SeeDance — sedang diproses.','Video Anda masuk antrean render.','Pembuatan dimulai, gambar sedang disusun.']
+  },
+  done:{
+    zh:['视频已生成完毕！即将为您播放，请欣赏。','做好了！请看大屏，这是属于您的一段画面。','完成了，接下来交给画面说话。'],
+    en:['Your video is ready — enjoy it on the big screen!','Done! Here it is, made from what you just said.','Ready — sit back and watch your idea come to life.'],
+    id:['Video Anda sudah jadi — selamat menonton di layar besar!','Selesai! Ini hasilnya, dibuat dari kata-kata Anda.','Sudah siap, silakan tonton ide Anda menjadi nyata.']
+  }
+};
+// 含中日韩字符 → 中文；命中印尼语词干 → 印尼语；其余一律英文（宁可错成英文，也不给英语观众念中文）。
+// 印尼语动词大量带词缀（buat→buatkan/bikin/jadikan），这些词干用 \w* 放行后缀；
+// 不用 dan/untuk/yang 这类短词——会误命中英文 dance 等词。
+const ID_HINT=/\b(saya|aku|tolong|mohon|ingin|silakan|coba|buat\w*|bikin\w*|jadikan|gambarkan|sebuah|matahari|terbenam|pantai|kucing|gunung|hutan|sungai|indah|cantik|hebat|keren)\b/i;
+function langOf(s){
+  const t=String(s||'');
+  if(/[\u3400-\u9FFF\u3040-\u30FF]/.test(t))return 'zh';
+  return ID_HINT.test(t)?'id':'en';
+}
+const lastLine={};
+let lastUserText='';
+function pickLine(kind,text){
+  const pool=(BOT_LINES[kind]||{})[langOf(text)]||BOT_LINES.reply.zh;
+  let line;
+  do{ line=pool[Math.floor(Math.random()*pool.length)]; }while(line===lastLine[kind]&&pool.length>1);
+  lastLine[kind]=line;
+  return line;
+}
+
+// ===== 视图 / 进度环 =====
+const C=2*Math.PI*108;
+function view(name){
+  ['viewStandby','viewProgress','viewComplete','viewVideo'].forEach(id=>{
+    const el=document.getElementById(id);el.style.display='none';el.classList.remove('active')});
+  const el=document.getElementById('view'+name.charAt(0).toUpperCase()+name.slice(1));
+  el.style.display='flex';el.classList.add('active');
+}
+function showScreen(name){view(name)}
+function setPct(p){document.getElementById('ring').style.strokeDashoffset=C*(1-p/100);
+  document.getElementById('pct').textContent=Math.round(p)+'%'}
+function setStage(i){
+  const en=['QUEUED','GENERATING','RENDERING','COMPLETE'];
+  document.getElementById('stageLabel').textContent=en[i]||'';
+  document.querySelectorAll('.pipe-node').forEach((n,j)=>{
+    n.classList.remove('active','done');if(j<i)n.classList.add('done');if(j===i)n.classList.add('active')});
+}
+function setDetail(t){document.getElementById('info').textContent=t}
+
+// ===== 演示模式配置 =====
+// local  ：纯前端模拟（彩排 / 断网兜底），就绪由「模拟视频就绪」或 ?autoReady=<ms> 触发
+// direct ：现场主用 —— 页面自己轮询「机器人小 JSON」拿观众的话，再自己轮询 SeeDance 任务列表拿视频，无中转、无后端
+// ws     ：连机器人 WebSocket（备选方案，机器人 Python 调 SeeDance）
+// live   ：轮询 Java 后端 /api/v1/demo/state（备选方案）
+// 现场换 IP 只用 URL 参数，不动代码：?mode=direct&robot=http://192.168.1.20:8766/demo/last
+const _q=new URLSearchParams(location.search);
+const _robot=_q.get('robot')||'';
+const _isHttp=_robot.startsWith('http');
+const _wsTarget=_q.get('ws')||(_robot&&!_isHttp?'ws://'+_robot+':8765':null);
+const _CFG=window.ARK_CFG||{};   // 密钥只在 ark-config.js（不进 Git）；URL 参数可临时覆盖
+const CONFIG={
+  mode:_q.get('mode')||(_CFG.mode)||(_q.has('live')?'live':(_wsTarget?'ws':'local')),
+  wsUrl:_wsTarget||_CFG.wsUrl||'ws://127.0.0.1:8765',
+  pollUrl:_q.get('poll')||_CFG.pollUrl||'/api/v1/demo/state',
+  pollInterval:parseInt(_q.get('interval')||'500',10),
+  robotUrl:_q.get('robotUrl')||(_isHttp?_robot:null)||_CFG.robotUrl||'http://127.0.0.1:8766/demo/last',
+  robotInterval:parseInt(_q.get('robotInterval')||'500',10),
+  arkBase:_q.get('arkBase')||_CFG.arkBase||'https://ark.cn-beijing.volces.com/api/v3',
+  arkKey:_q.get('arkKey')||_CFG.arkKey||'',           // 空 = 没配密钥，direct 模式到点放离线兜底片
+  arkModel:_q.get('arkModel')||_CFG.arkModel||'',     // 同一把 key 下挂着多个模型，必须锁定展会用的那个
+  arkInterval:parseInt(_q.get('arkInterval')||'2000',10),
+  arkPageSize:parseInt(_q.get('arkPageSize')||'20',10),
+  autoReadyMs:parseInt(_q.get('autoReady')||'0',10),
+  roundTimeoutMs:parseInt(_q.get('timeout')||'180000',10),   // 单轮超时：不外露报错，直接放离线片（契约 §1.4）。实测真片 137~211 秒才出，90 秒会把真结果判死
+  // 离线兜底片：把预录 mp4 放进 assets/fallback/，文件名填这里（或 ?fb=a.mp4,b.mp4 临时覆盖）。
+  // 三种情况会放它：上游生成失败、直链过期播不动、现场没外网——观众看到的仍是「说话→出视频」。
+  fallbackVideos:(_q.get('fb')?_q.get('fb').split(',').filter(Boolean)
+    :['assets/fallback/fallback-1.mp4','assets/fallback/fallback-2.mp4','assets/fallback/fallback-3.mp4']),
+  fakeVideo:_CFG.fakeVideo||'https://www.w3schools.com/html/mov_bbb.mp4'   // 最后一级兜底：要外网，只当压底
+};
+
+let demoRunning=false;
+let demoTimers=[];      // 一次性定时器
+let holdTimer=null;     // 95% 保持循环
+let pollTimer=null;     // live 轮询定时器
+let roundTimer=null;    // 单轮超时
+let curRound=null;      // 当前轮次号（live / direct / ws 共用）
+let msgSeen={};         // 每轮已渲染到第几条消息（历史不清屏，靠它防重复渲染）
+
+function clearTimers(){demoTimers.forEach(t=>clearTimeout(t));demoTimers=[]}
+function stopHold(){if(holdTimer){clearInterval(holdTimer);holdTimer=null}}
+function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}}
+function stopRoundTimer(){if(roundTimer){clearTimeout(roundTimer);roundTimer=null}}
+// 起轮后自持超时：拿不到结果就放离线片，大屏绝不卡在 95% 不动
+function startRoundTimer(){stopRoundTimer();roundTimer=setTimeout(onDemoFailed,CONFIG.roundTimeoutMs)}
+
+// ---- 假进度：0 → 95% 后保持（SeeDance 不报百分比，绝不自动到 100%）----
+const HOLD_DETAILS=['视频即将完成，正在做最后处理...','正在合成最终画面，请稍候...','AI 正在精修视频细节...','即将为您呈现，正在收尾...'];
+function startFakeProgress(){
+  view('progress');setStage(0);setPct(0);setDetail('正在连接 SeeDance 云端服务...');
+  const climb=[
+    {t:800,  s:0,p:8, d:'任务已提交，排队等待中...'},
+    {t:4000, s:1,p:20,d:'AI 模型正在分析视频描述...'},
+    {t:8000, s:1,p:35,d:'正在生成视频关键帧...'},
+    {t:12000,s:1,p:50,d:'AI 正在构建场景结构...'},
+    {t:16000,s:1,p:65,d:'正在渲染建筑与光影效果...'},
+    {t:20000,s:2,p:80,d:'正在生成视频运动轨迹...'},
+    {t:24000,s:2,p:90,d:'正在进行画质增强处理...'},
+    {t:28000,s:2,p:95,d:'正在合成最终视频画面...'}
+  ];
+  climb.forEach(x=>demoTimers.push(setTimeout(()=>{setStage(x.s);setPct(x.p);setDetail(x.d)},x.t)));
+  demoTimers.push(setTimeout(enterHold,28000));
+}
+function enterHold(){
+  setStage(2);setPct(95);
+  let i=0;setDetail(HOLD_DETAILS[0]);
+  stopHold();
+  holdTimer=setInterval(()=>{
+    i=(i+1)%HOLD_DETAILS.length;
+    setDetail(HOLD_DETAILS[i]);
+    setPct(i%2?96:95);        // 95↔96 轻微呼吸：看着在动，但不到 100
+  },2600);
+}
+
+// ---- 就绪：跳 100% → 完成态(约3s) → 播放 ----
+function onVideoReady(url){
+  if(!demoRunning)return;
+  stopHold();stopPoll();stopDirect();stopRoundTimer();clearTimers();
+  setStage(3);setPct(100);setDetail('视频生成完成！');
+  demoTimers.push(setTimeout(()=>{view('complete');addMsg('bot',pickLine('done',lastUserText))},800));
+  demoTimers.push(setTimeout(()=>playVideo(url||CONFIG.fakeVideo),3800));
+}
+// ---- 兜底片：候选里轮流取（两位观众不该看到同一条），坏掉的记住不再试 ----
+let fbBad={}, fbCursor=0;
+function fbAll(){
+  const list=CONFIG.fallbackVideos.filter(u=>u&&!fbBad[u]);
+  return (CONFIG.fakeVideo&&!fbBad[CONFIG.fakeVideo])?list.concat([CONFIG.fakeVideo]):list;
+}
+function pickFallback(){
+  const pool=fbAll();
+  if(!pool.length)return null;
+  return pool[fbCursor++%pool.length];
+}
+function playVideo(url,isFb){
+  view('video');
+  const v=document.getElementById('vid');
+  v.onerror=()=>{
+    if(isFb)fbBad[url]=1;
+    const nxt=pickFallback();
+    if(nxt&&nxt!==url){console.warn('[video] '+(isFb?'兜底片':'上游地址')+'播不动，换下一条：',url);playVideo(nxt,true);}
+    else{console.warn('[video] 已无可用兜底片，返回待机');setTimeout(endRound,2500);}
+  };
+  v.onended=()=>setTimeout(endRound,3000);
+  v.src=url;v.play().catch(()=>{});
+}
+function onDemoFailed(){
+  if(!demoRunning)return;
+  demoRunning=false;                    // failed / 超时会反复读到，本轮只处理一次
+  stopHold();stopRoundTimer();
+  const fb=pickFallback();
+  if(fb){   // 不外露链路断了：放一条离线预录片，观众看到的仍是「说话→出视频」
+    setDetail('正在为您播放 SeeDance 精选作品...');
+    demoTimers.push(setTimeout(()=>playVideo(fb,true),900));
+  }else{
+    setDetail('视频生成失败，正在返回待机...');
+    demoTimers.push(setTimeout(endRound,2500));
+  }
+}
+// 一轮收尾：回待机 + 重新监听下一位访客（漏了恢复轮询 = 第一轮之后彻底收不到新请求）
+function endRound(){
+  view('standby');demoRunning=false;
+  if(CONFIG.mode==='live')resumePolling();
+  if(CONFIG.mode==='direct')startDirect();
+}
+
+// ---- local 模式：一轮完整模拟（控制面板 / 历史 / 自动演示触发）----
+function runDemo(userText){
+  if(demoRunning)return;demoRunning=true;
+  stopHold();stopPoll();stopDirect();stopRoundTimer();clearTimers();
+  const visitorMsg=userText||'你好，请帮我生成一个15秒的AI视频，主题是未来城市';
+  demoTimers.push(setTimeout(()=>addMsg('user',visitorMsg),300));
+  demoTimers.push(setTimeout(()=>typing(true),1000));
+  demoTimers.push(setTimeout(()=>{typing(false);addMsg('bot',pickLine('reply',visitorMsg))},2200));
+  demoTimers.push(setTimeout(()=>{startFakeProgress();startRoundTimer();addMsg('bot',pickLine('submitted',visitorMsg))},3000));
+  if(CONFIG.autoReadyMs>0)demoTimers.push(setTimeout(()=>onVideoReady(CONFIG.fakeVideo),CONFIG.autoReadyMs));
+}
+function simulateReady(){onVideoReady(CONFIG.fakeVideo)}
+
+// ---- live 模式：轮询 Java 后端（备选）----
+function startPolling(){stopPoll();curRound=null;msgSeen={};resumePolling()}
+// 只重起定时器，绝不清 curRound——后端状态仍停在 ready，清了会把同一轮当新一轮，视频无限重播
+function resumePolling(){if(!pollTimer)pollTimer=setInterval(()=>pollOnce(false),CONFIG.pollInterval)}
+async function pollOnce(manual){
+  try{
+    const res=await fetch(CONFIG.pollUrl,{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const env=await res.json();
+    handleState(env&&env.data?env.data:env);   // 兼容 Result 信封 {code,msg,data} 与裸 JSON
+    setSysOnline(true);
+  }catch(e){
+    if(manual)console.warn('[poll] 请求失败：',e.message);
+    setSysOnline(false);
+  }
+}
+function handleState(st){
+  if(!st)return;
+  if(st.round!=null&&st.round>0&&st.round!==curRound){
+    curRound=st.round;demoRunning=true;stopHold();clearTimers();
+    if(st.phase==='generating'){startFakeProgress();startRoundTimer();}
+  }
+  if(st.round!=null)renderMsgs(st.round,st.messages);
+  if(st.phase==='ready'&&st.videoUrl)onVideoReady(st.videoUrl);
+  else if(st.phase==='failed')onDemoFailed();
+}
+// 后端每轮返回「本轮累计消息」，轮询会反复读到同一批 → 用 msgSeen 只补新的。
+// 不按内容去重：两位观众同一分钟说一模一样的话是会发生的事，去重会吞掉真气泡。
+function renderMsgs(round,list){
+  const msgs=list||[],done=msgSeen[round]||0;
+  msgs.slice(done).forEach(m=>addMsg(m.role==='user'?'user':'bot',m.text,m.time));
+  msgSeen[round]=msgs.length;
+}
+
+// ---- direct 模式（现场主用）：页面双轮询，无中转 ----
+// ① 问机器人小 JSON：{round,text,time} —— round 变了就是来了一位新观众
+// ② 问 SeeDance 任务列表 —— 只播「本轮新出现且已跑完」的那条
+let robotTimer=null,arkTimer=null,baseIds=new Set(),playedIds=new Set();
+function startDirect(){
+  stopDirect();
+  robotTimer=setInterval(pollRobot,CONFIG.robotInterval);
+  arkTimer=setInterval(pollArk,CONFIG.arkInterval);
+  pollRobot();pollArk();
+}
+function stopDirect(){
+  if(robotTimer){clearInterval(robotTimer);robotTimer=null;}
+  if(arkTimer){clearInterval(arkTimer);arkTimer=null;}
+}
+async function arkList(){
+  const url=CONFIG.arkBase+'/contents/generations/tasks?page_size='+CONFIG.arkPageSize;
+  const res=await fetch(url,{headers:{'Authorization':'Bearer '+CONFIG.arkKey},cache:'no-store'});
+  if(!res.ok)throw new Error('SeeDance HTTP '+res.status);
+  const j=await res.json();
+  return (j&&(j.data?j.data.items:j.items))||[];
+}
+async function pollRobot(){
+  try{
+    const res=await fetch(CONFIG.robotUrl,{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const st=await res.json();
+    setRobotOnline(true);
+    if(st&&st.round!=null&&st.round>0&&st.round!==curRound){
+      curRound=st.round;demoRunning=true;stopHold();clearTimers();
+      addMsg('user',st.text,st.time);
+      addMsg('bot',pickLine('reply',st.text));
+      startFakeProgress();startRoundTimer();
+      arkBaseline();     // 起轮第一件事：把「此刻已跑完的任务」记成排除名单
+    }
+  }catch(e){setRobotOnline(false);}
+}
+// 防重播：11:02 出的片子若不排除，11:03 第二位观众一起来就会被当成结果再放一遍。
+// 基线收「此刻已尘埃落定」的任务（成功或失败/取消）——它们不可能是本轮结果；
+// 仍在排队/跑着的一律算本轮结果（机器人可能在我们取基线前就提交了新任务）。
+const ARK_DONE=['succeeded','failed','cancelled'];
+async function arkBaseline(){
+  if(!CONFIG.arkKey)return;
+  try{baseIds=new Set((await arkList()).filter(t=>ARK_DONE.includes(t.status)).map(t=>t.id));setArkOnline(true);}
+  catch(e){baseIds=new Set();setArkOnline(false);}
+}
+async function pollArk(){
+  if(!CONFIG.arkKey||!demoRunning)return;
+  let items;
+  try{items=await arkList();setArkOnline(true);}
+  catch(e){setArkOnline(false);return;}
+  for(const t of items){
+    if(CONFIG.arkModel&&t.model&&t.model!==CONFIG.arkModel)continue;   // 多模型共用一把 key，必须过滤
+    if(!t.id||baseIds.has(t.id)||playedIds.has(t.id))continue;
+    if(t.status==='succeeded'){
+      playedIds.add(t.id);
+      onVideoReady(t.content&&t.content.video_url);
+      return;
+    }
+    if(t.status==='failed'||t.status==='cancelled'){
+      // 上游会自己判死（实测：4 秒短片因输出音频版权失败），这条 id 永远不会再变好。
+      // 不立刻切离线片的话，观众对着一张 95% 的进度皮看三分钟，比放兜底片更露馅。
+      playedIds.add(t.id);
+      onDemoFailed();
+      return;
+    }
+  }
+}
+function pollNow(){
+  if(CONFIG.mode==='direct'){pollRobot();pollArk();}
+  else if(CONFIG.mode==='live')pollOnce(true);
+  else console.warn('[pollNow] 当前模式无需轮询');
+}
+
+// ---- ws 模式（备选）：连机器人 Python 的 WS 服务 ----
+let ws=null,wsReconnectTimer=null,wsPingTimer=null;
+function startWs(){
+  clearTimeout(wsReconnectTimer);
+  try{ws=new WebSocket(CONFIG.wsUrl);}catch(e){scheduleWsReconnect();return;}
+  ws.onopen=()=>{setSysOnline(true);startWsPing();};
+  ws.onclose=()=>{setSysOnline(false);stopWsPing();scheduleWsReconnect();};
+  ws.onerror=()=>{try{ws.close();}catch(e){}};
+  ws.onmessage=(ev)=>{let m;try{m=JSON.parse(ev.data);}catch(e){return;}handleWsMsg(m);};
+}
+function scheduleWsReconnect(){clearTimeout(wsReconnectTimer);wsReconnectTimer=setTimeout(startWs,2000);}
+function startWsPing(){stopWsPing();wsPingTimer=setInterval(()=>{if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'ping'}));},5000);}
+function stopWsPing(){if(wsPingTimer){clearInterval(wsPingTimer);wsPingTimer=null;}}
+function wsSend(obj){if(ws&&ws.readyState===1){ws.send(JSON.stringify(obj));return true;}return false;}
+function handleWsMsg(m){
+  if(!m||!m.type)return;
+  if(m.type==='chat'){
+    const isNew=m.round!=null&&m.round>0&&m.round!==curRound;
+    if(isNew){curRound=m.round;demoRunning=true;stopHold();clearTimers();}   // 不清屏：观众看到的是连续对话
+    addMsg(m.role==='user'?'user':'bot',m.text,m.time);
+    if(isNew&&m.role==='user'){startFakeProgress();startRoundTimer();}
+  }else if(m.type==='video_ready'){
+    if(m.round!=null&&curRound!=null&&m.round!==curRound)return;   // 过期轮次丢弃
+    onVideoReady(m.url);
+  }else if(m.type==='video_failed'){
+    if(m.round!=null&&curRound!=null&&m.round!==curRound)return;
+    onDemoFailed();
+  }else if(m.type==='system'){
+    setSysOnline(m.online!==false);
+  }
+}
+
+// ===== 控制面板：阶段跳转（本地调试用）=====
+function jumpTo(s){
+  stopHold();stopPoll();stopDirect();stopRoundTimer();clearTimers();demoRunning=true;
+  if(s==='standby'){view('standby');demoRunning=false;return}
+  if(s==='queue'){view('progress');setStage(0);setPct(5);setDetail('排队等待中...');return}
+  if(s==='gen'){view('progress');setStage(1);setPct(40);setDetail('AI 正在生成视频帧...');return}
+  if(s==='render'){view('progress');enterHold();return}   // 渲染中 = 95% 保持循环
+  if(s==='complete'){onVideoReady(CONFIG.fakeVideo);return}
+  if(s==='video'){view('video');const v=document.getElementById('vid');v.src=CONFIG.fakeVideo;v.play().catch(()=>{});
+    v.onended=()=>setTimeout(endRound,3000);return}
+}
+function resetAll(){
+  clearTimers();stopHold();stopPoll();stopDirect();stopRoundTimer();
+  demoRunning=false;curRound=null;msgSeen={};
+  chatEl.innerHTML='';view('standby');   // 只有控制面板这里会清历史，正常轮次切换保留
+  if(CONFIG.mode==='live')startPolling();
+  if(CONFIG.mode==='direct')startDirect();
+}
+
+// Control Panel
+const cp=document.getElementById('ctrlPanel'),ci=document.getElementById('ctrlInput'),ct=document.getElementById('ctrlToggle');
+function togglePanel(){cp.classList.toggle('open')}
+ct.addEventListener('click',togglePanel);
+document.addEventListener('keydown',e=>{
+  if(e.key==='`'||e.key==='~'){e.preventDefault();togglePanel();if(cp.classList.contains('open'))ci.focus()}
+  if(e.key==='Escape'&&cp.classList.contains('open'))cp.classList.remove('open')});
+function sendCmd(){
+  const t=ci.value.trim();if(!t)return;
+  addHistory(t);
+  if(CONFIG.mode==='ws'){
+    // 交给机器人 Python：发 send，等它回推 chat(user) 起新一轮（不本地渲染，避免重复气泡）
+    if(!wsSend({type:'send',text:t}))addMsg('bot','（未连上机器人，消息未发送）');
+  }else if(CONFIG.mode==='direct'){
+    // direct 模式的观众是真人对机器人说话；彩排时把话写进机器人那个小 JSON 即可（本机可用 mock-robot.js）
+    addMsg('bot','（在线模式：请在机器人侧触发，或用 ?mode=local 本地演示）');
+  }else{
+    resetAll();setTimeout(()=>runDemo(t),300);
+  }
+  ci.value='';
+}
+document.getElementById('btnSend').addEventListener('click',sendCmd);
+ci.addEventListener('keydown',e=>{if(e.key==='Enter')sendCmd()});
+document.getElementById('btnAutoDemo').addEventListener('click',()=>{resetAll();setTimeout(()=>runDemo(),300)});
+
+// ===== History =====
+const HIST_KEY='seedance_exhibition_history';
+function getHistory(){try{return JSON.parse(localStorage.getItem(HIST_KEY))||[]}catch{return[]}}
+function saveHistory(list){localStorage.setItem(HIST_KEY,JSON.stringify(list.slice(0,30)))}
+function addHistory(text){const list=getHistory().filter(h=>h!==text);list.unshift(text);saveHistory(list);renderHistory()}
+function delHistory(idx){const list=getHistory();list.splice(idx,1);saveHistory(list);renderHistory()}
+function clearHistory(){localStorage.removeItem(HIST_KEY);renderHistory()}
+function renderHistory(){
+  const list=getHistory(),el=document.getElementById('histList'),cnt=document.getElementById('histCount');
+  cnt.textContent=list.length?`${list.length} 条`:'';
+  if(!list.length){el.innerHTML='<div class="hist-empty">暂无历史记录</div>';return}
+  el.innerHTML=list.map((h,i)=>`<div class="hist-item" onclick="useHistory(${i})">
+    <span class="hist-text" title="${esc(h)}">${esc(h)}</span>
+    <span class="hist-del" onclick="event.stopPropagation();delHistory(${i})">×</span></div>`).join('');
+}
+function useHistory(idx){const list=getHistory();if(list[idx]){resetAll();setTimeout(()=>runDemo(list[idx]),300)}}
+renderHistory();
+
+// ===== 底部状态灯 =====
+function modeName(){return CONFIG.mode==='direct'?'机器人 + SeeDance 直连':CONFIG.mode==='ws'?'机器人直连（WS）':CONFIG.mode==='live'?'在线模式（轮询后端）':'本地模拟模式'}
+function setSysOnline(ok){
+  document.getElementById('dotSys').className='f-dot '+(ok?'ok':'err');
+  document.getElementById('lblSys').textContent=ok?'系统在线':'离线';
+  document.getElementById('dotWifi').className='f-dot '+(ok?'ok':'err');
+  document.getElementById('lblMode').textContent=ok?modeName():'离线Demo';
+}
+// direct 模式两条链路分开标红：机器人没话 = 没人说话；SeeDance 不通 = 出不了片（都会走兜底片）
+function setRobotOnline(ok){
+  document.getElementById('dotRobot').className='f-dot '+(ok?'ok':'err');
+  document.getElementById('lblRobot').textContent=ok?'T1 机器人':'机器人不可达';
+}
+function setArkOnline(ok){
+  const d=document.getElementById('dotWifi');d.className='f-dot '+(ok?'ok':'err');
+  d.nextElementSibling.textContent=ok?'SeeDance':'SeeDance 不通';
+}
+setRobotOnline(CONFIG.mode==='direct'?false:true);
+function checkNetwork(){if(CONFIG.mode==='local')setSysOnline(navigator.onLine);}
+window.addEventListener('online',checkNetwork);window.addEventListener('offline',checkNetwork);
+
+// ===== 启动：按模式接上对应链路 =====
+(function initMode(){
+  const tag=document.getElementById('modeTag');
+  if(CONFIG.mode==='direct'){tag.textContent='直连轮询';setSysOnline(true);setRobotOnline(false);startDirect();}
+  else if(CONFIG.mode==='ws'){tag.textContent='机器人WS';startWs();}
+  else if(CONFIG.mode==='live'){tag.textContent='轮询后端';startPolling();}
+  else{tag.textContent='本地模拟';checkNetwork();}
+})();
+</script>
+</body>
+</html>

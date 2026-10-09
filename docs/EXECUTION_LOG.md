@@ -244,6 +244,26 @@
    401 "API key format is incorrect") — moved to LLM_MODEL. Config hardened with `or`-fallbacks.
 4. Remaining for live conversation: iFlytek keys only (ASR + TTS).
 
+## 2026-10-09 — Phase 22: Frozen contract v2.0 implemented (WS robot-side) + live smoke OK
+
+1. Received the developer's exhibition package (`exhibition/`): PRD + technical design + **接口契约 v2.0**
+   (frozen 2026-10-09) + 3 page versions + mocks (incl. `mock-ws-backend.js` protocol reference) +
+   fallback videos.
+2. **Contract v2.0 = WebSocket**: robot Python = WS server :8765; page = WS client; ROBOT calls
+   SeeDance (keys never in the browser — our earlier HTTP polling design was superseded).
+3. Reworked `apps/demo_ui` to the frozen protocol: `protocol.py` (chat/video_ready/video_failed/
+   system/ping/pong + RoundManager with one-terminal-per-round, stale-round drop, 90s watchdog),
+   `server.py` (WS root path + optional page serving via --pages), `controller.py` (round flow:
+   fixed bot phrase → Seedance 15s/16:9 → terminal; DEMO_DRY rehearsal mode).
+4. Seedance client: added top-level `duration`/`ratio` payload params (from the developer's own
+   page builder). Model switched to `dreamina-seedance-2-5-260628` (15s needs the 2.5 tier).
+5. **Tests**: 19 demo_ui (protocol/round manager) + 16 seedance, all pass. **Live WS smoke OK**:
+   system→pong→chat(user)→chat(bot)→video_ready with correct rounds; page served HTTP 200.
+6. Open items: A6 (ASR trigger timing — needs iFlytek keys), A7 (page ?robot= param — page already
+   defaults ws://127.0.0.1:8765), A8 (90s watchdog vs real generation time ~1-3 min — must be
+   aligned with the frontend; env ROBOT_ROUND_TIMEOUT_S), v3 page has no WS client (confirm which
+   page is the demo one), live 15s paid generation test pending user approval.
+
 ## Status & next steps
 
 | Item | Status |

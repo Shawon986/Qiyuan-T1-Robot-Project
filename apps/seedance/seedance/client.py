@@ -15,13 +15,17 @@ class ArkError(RuntimeError):
 
 
 def build_task_payload(model: str, prompt: str, image_b64: str | None = None,
-                       video_url: str | None = None, role: str = "first_frame") -> dict[str, Any]:
+                       video_url: str | None = None, role: str = "first_frame",
+                       duration: int | None = None, ratio: str | None = None) -> dict[str, Any]:
     """Pure payload builder (offline-testable).
 
     Validated reference rules:
       - text: {"type": "text", "text": ...}
       - image: inline base64 data URI (or public URL) - base64 verified working
       - video: public URL only (role "reference_video") - base64 rejected upstream
+    Generation params (per the frozen exhibition contract): top-level
+    `duration` (seconds) and `ratio` (e.g. "16:9") - confirmed from the
+    developer's original page payload.
     """
     content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
     if image_b64:
@@ -36,7 +40,12 @@ def build_task_payload(model: str, prompt: str, image_b64: str | None = None,
             "video_url": {"url": video_url},
             "role": "reference_video",
         })
-    return {"model": model, "content": content}
+    body: dict[str, Any] = {"model": model, "content": content}
+    if duration is not None:
+        body["duration"] = duration
+    if ratio:
+        body["ratio"] = ratio
+    return body
 
 
 def result_video_url(task: dict) -> str | None:
@@ -71,8 +80,10 @@ class SeedanceClient:
             raise ArkError(f"upstream unreachable: {exc.reason}") from exc
 
     def submit(self, prompt: str, image_b64: str | None = None,
-               video_url: str | None = None, role: str = "first_frame") -> str:
-        body = build_task_payload(self.cfg.model_id, prompt, image_b64, video_url, role)
+               video_url: str | None = None, role: str = "first_frame",
+               duration: int | None = None, ratio: str | None = None) -> str:
+        body = build_task_payload(self.cfg.model_id, prompt, image_b64, video_url, role,
+                                  duration=duration, ratio=ratio)
         resp = self._request("POST", "/contents/generations/tasks", body)
         task_id = resp.get("id")
         if not task_id:

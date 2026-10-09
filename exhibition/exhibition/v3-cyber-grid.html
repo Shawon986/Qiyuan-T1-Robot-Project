@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeeDance × 启元T1 | AI视频生成 · 赛博版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+:root{
+  --bg:#020408;--bg2:#060c14;--bg3:#0a1420;
+  --cyan:#00f0ff;--cyan2:#00c8dd;--cyan3:#40f8ff;
+  --mag:#ff00aa;--mag2:#cc0088;
+  --grn:#00ff88;--grn2:#00cc6a;
+  --yel:#ffee00;
+  --text:#d0e8f0;--text2:#607888;--text3:#304050;
+  --glass:rgba(6,12,20,.7);--border:rgba(0,240,255,.08);
+  --radius:4px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:'Rajdhani','Noto Sans SC',sans-serif}
+
+/* ===== Background Effects ===== */
+.bg-grid{position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,240,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  animation:gridScroll 20s linear infinite}
+@keyframes gridScroll{to{background-position:40px 40px}}
+
+.bg-scan{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,240,255,.008) 2px,rgba(0,240,255,.008) 4px)}
+
+.bg-vignette{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 50%,rgba(2,4,8,.8) 100%)}
+
+#hexCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ===== Layout ===== */
+.app{position:relative;z-index:1;display:grid;grid-template-rows:68px 1fr 44px;height:100vh}
+
+/* ===== Header ===== */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;
+  background:linear-gradient(180deg,rgba(2,4,8,.95),rgba(2,4,8,.6));
+  border-bottom:1px solid rgba(0,240,255,.12);position:relative}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.4}
+.hdr-l{display:flex;align-items:center;gap:14px}
+.hdr-logo{width:36px;height:36px;border:1px solid var(--cyan);display:flex;align-items:center;
+  justify-content:center;font-family:'Orbitron';font-weight:800;font-size:16px;color:var(--cyan);
+  clip-path:polygon(15% 0,85% 0,100% 15%,100% 85%,85% 100%,15% 100%,0 85%,0 15%);
+  background:rgba(0,240,255,.05);text-shadow:0 0 12px var(--cyan)}
+.hdr-brand{font-family:'Orbitron';font-size:16px;font-weight:600;letter-spacing:4px;color:var(--cyan);
+  text-shadow:0 0 20px rgba(0,240,255,.3)}
+.hdr-c{display:flex;align-items:center;gap:10px}
+.hdr-sep{width:24px;height:1px;background:var(--cyan);opacity:.3}
+.hdr-prod{font-size:12px;color:var(--text2);letter-spacing:4px;font-weight:500}
+.hdr-r{display:flex;align-items:center;gap:14px}
+.hdr-clock{font-family:'Orbitron';font-size:13px;color:var(--cyan2);font-variant-numeric:tabular-nums;
+  text-shadow:0 0 8px rgba(0,240,255,.2)}
+.hdr-mode{padding:3px 12px;border:1px solid rgba(0,240,255,.25);font-family:'Orbitron';font-size:9px;
+  letter-spacing:2px;color:var(--cyan);background:rgba(0,240,255,.04);
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+
+/* ===== Main ===== */
+.mn{display:grid;grid-template-columns:360px 1fr;overflow:hidden}
+
+/* ===== Chat ===== */
+.cht{display:flex;flex-direction:column;border-right:1px solid rgba(0,240,255,.08);background:var(--glass);
+  backdrop-filter:blur(16px)}
+.cht-hd{padding:18px 22px 14px;border-bottom:1px solid rgba(0,240,255,.06)}
+.cht-hd h3{font-family:'Orbitron';font-size:10px;font-weight:600;letter-spacing:4px;color:var(--cyan);
+  text-shadow:0 0 8px rgba(0,240,255,.3)}
+.cht-hd p{font-size:10px;color:var(--text3);letter-spacing:1px;margin-top:3px}
+.cht-body{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px;
+  scrollbar-width:thin;scrollbar-color:rgba(0,240,255,.1) transparent}
+.cht-body::-webkit-scrollbar{width:2px}
+.cht-body::-webkit-scrollbar-thumb{background:rgba(0,240,255,.15)}
+
+.cm{max-width:88%;animation:cmIn .4s ease}
+@keyframes cmIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.cm-v{align-self:flex-start}
+.cm-r{align-self:flex-end;animation-name:cmInR}
+@keyframes cmInR{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+.cm-tag{font-family:'Orbitron';font-size:8px;letter-spacing:2px;margin-bottom:4px;font-weight:600}
+.cm-v .cm-tag{color:var(--mag)}
+.cm-r .cm-tag{color:var(--grn)}
+.cm-box{padding:12px 16px;font-size:13px;line-height:1.7;position:relative;
+  border:1px solid;background:rgba(0,0,0,.3)}
+.cm-v .cm-box{border-color:rgba(255,0,170,.15);border-left:2px solid var(--mag);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%)}
+.cm-r .cm-box{border-color:rgba(0,255,136,.12);border-right:2px solid var(--grn);
+  clip-path:polygon(0 0,100% 0,100% 100%,8px 100%,0 calc(100% - 8px))}
+.cm-time{font-size:9px;color:var(--text3);margin-top:4px;text-align:right;font-family:'Orbitron'}
+
+.typing-bar{align-self:flex-end;display:flex;align-items:center;gap:6px;padding:10px 16px;
+  border:1px solid rgba(0,255,136,.1);background:rgba(0,255,136,.03)}
+.typing-bar i{width:4px;height:4px;background:var(--grn);animation:tBlink 1s infinite}
+.typing-bar i:nth-child(2){animation-delay:.15s}
+.typing-bar i:nth-child(3){animation-delay:.3s}
+.typing-bar span{font-family:'Orbitron';font-size:8px;color:var(--grn);letter-spacing:2px;margin-left:4px}
+@keyframes tBlink{0%,100%{opacity:.2}50%{opacity:1}}
+
+/* ===== Display ===== */
+.dsp{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+/* Corner decorations */
+.dsp::before,.dsp::after{content:'';position:absolute;width:40px;height:40px;z-index:5;pointer-events:none}
+.dsp::before{top:16px;left:16px;border-top:1px solid var(--cyan);border-left:1px solid var(--cyan);opacity:.3}
+.dsp::after{bottom:16px;right:16px;border-bottom:1px solid var(--cyan);border-right:1px solid var(--cyan);opacity:.3}
+
+/* Standby */
+.sb{display:flex;flex-direction:column;align-items:center;gap:32px;text-align:center}
+.sb-hex{position:relative;width:160px;height:160px;display:flex;align-items:center;justify-content:center}
+.sb-hex-ring{position:absolute;inset:0;
+  clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  border:1px solid rgba(0,240,255,.2);animation:hexSpin 12s linear infinite}
+.sb-hex-ring:nth-child(2){inset:14px;animation-duration:8s;animation-direction:reverse;
+  border-color:rgba(255,0,170,.15)}
+.sb-hex-ring:nth-child(3){inset:28px;animation-duration:16s;border-color:rgba(0,255,136,.1)}
+@keyframes hexSpin{to{transform:rotate(360deg)}}
+.sb-core{width:50px;height:50px;
+  clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  background:linear-gradient(135deg,rgba(0,240,255,.3),rgba(255,0,170,.2));
+  box-shadow:0 0 40px rgba(0,240,255,.2);animation:corePulse 3s ease-in-out infinite;z-index:1}
+@keyframes corePulse{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+.sb h2{font-family:'Orbitron';font-size:24px;font-weight:400;letter-spacing:10px;color:var(--cyan);
+  text-shadow:0 0 30px rgba(0,240,255,.3)}
+.sb p{font-size:13px;color:var(--text2);line-height:2;max-width:380px;letter-spacing:1px}
+.sb-status{display:flex;align-items:center;gap:8px;font-family:'Orbitron';font-size:9px;
+  letter-spacing:3px;color:var(--grn)}
+.sb-status .blink{width:5px;height:5px;background:var(--grn);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Progress */
+.pg{display:none;flex-direction:column;align-items:center;justify-content:center;gap:36px;width:100%;padding:32px}
+.pg.active{display:flex}
+.pg h2{font-family:'Orbitron';font-size:14px;letter-spacing:8px;color:var(--text2);font-weight:400}
+.pg-ring{position:relative;width:200px;height:200px}
+.pg-track{fill:none;stroke:rgba(0,240,255,.04);stroke-width:3}
+.pg-fill{fill:none;stroke:url(#cyberGrad);stroke-width:3;stroke-linecap:square;
+  transition:stroke-dashoffset .8s ease;filter:drop-shadow(0 0 6px rgba(0,240,255,.5))}
+.pg-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pg-num{font-family:'Orbitron';font-size:48px;font-weight:300;color:var(--cyan);
+  text-shadow:0 0 20px rgba(0,240,255,.4);font-variant-numeric:tabular-nums}
+.pg-lbl{font-family:'Orbitron';font-size:9px;color:var(--text3);letter-spacing:4px;margin-top:6px}
+
+.pg-bar{width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px}
+.pg-steps{display:flex;gap:0;width:100%}
+.pg-step{flex:1;text-align:center;position:relative;padding-top:20px}
+.pg-step::before{content:'';position:absolute;top:6px;left:0;right:0;height:2px;background:rgba(255,255,255,.04)}
+.pg-step::after{content:'';position:absolute;top:2px;left:50%;transform:translateX(-50%);
+  width:10px;height:10px;border:1px solid var(--text3);background:var(--bg);transition:all .5s;
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.pg-step.on::after{border-color:var(--cyan);background:var(--cyan);
+  box-shadow:0 0 12px rgba(0,240,255,.6)}
+.pg-step.ok::after{border-color:var(--grn);background:var(--grn);box-shadow:0 0 8px rgba(0,255,136,.4)}
+.pg-step.ok::before{background:linear-gradient(90deg,var(--grn),var(--cyan))}
+.pg-step span{font-family:'Orbitron';font-size:8px;letter-spacing:2px;color:var(--text3);transition:color .4s}
+.pg-step.on span{color:var(--cyan)}
+.pg-step.ok span{color:var(--grn)}
+.pg-info{font-size:12px;color:var(--text3);text-align:center;letter-spacing:1px;min-height:18px}
+
+/* Complete */
+.cp{display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px}
+.cp.active{display:flex}
+.cp-icon{width:72px;height:72px;display:flex;align-items:center;justify-content:center;
+  clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  background:rgba(0,255,136,.08);border:1px solid var(--grn);
+  box-shadow:0 0 40px rgba(0,255,136,.15);animation:cpPop .6s ease}
+@keyframes cpPop{from{opacity:0;transform:scale(.5) rotate(-30deg)}to{opacity:1;transform:none}}
+.cp-icon svg{width:32px;height:32px;stroke:var(--grn);stroke-width:2.5;fill:none}
+.cp h2{font-family:'Orbitron';font-size:20px;font-weight:400;letter-spacing:8px;color:var(--grn);
+  text-shadow:0 0 20px rgba(0,255,136,.3)}
+.cp p{font-size:12px;color:var(--text3);letter-spacing:2px}
+
+/* Video */
+.vd{display:none;width:100%;height:100%;position:relative;background:#000}
+.vd.active{display:flex;align-items:center;justify-content:center}
+.vd video{width:100%;height:100%;object-fit:contain}
+.vd-bar{position:absolute;bottom:0;left:0;right:0;padding:16px 28px;
+  background:linear-gradient(transparent,rgba(0,0,0,.9));display:flex;align-items:center;justify-content:space-between}
+.vd-tag{font-family:'Orbitron';font-size:9px;letter-spacing:3px;color:var(--cyan);
+  padding:4px 14px;border:1px solid rgba(0,240,255,.25);background:rgba(0,240,255,.04);
+  clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.vd-note{font-size:10px;color:var(--text3);letter-spacing:1px}
+
+/* ===== Footer ===== */
+.ftr{display:flex;align-items:center;justify-content:space-between;padding:0 28px;
+  background:rgba(2,4,8,.9);border-top:1px solid rgba(0,240,255,.08)}
+.ftr-g{display:flex;align-items:center;gap:20px}
+.ftr-i{display:flex;align-items:center;gap:5px;font-family:'Orbitron';font-size:8px;
+  letter-spacing:2px;color:var(--text3)}
+.ftr-d{width:4px;height:4px}
+.ftr-d.ok{background:var(--grn);box-shadow:0 0 6px var(--grn)}
+.ftr-d.err{background:#ff3344;box-shadow:0 0 6px #ff3344}
+.ftr-c{font-family:'Orbitron';font-size:8px;letter-spacing:3px;color:var(--text3)}
+
+/* ===== Glitch Effect ===== */
+@keyframes glitch{
+  0%,100%{text-shadow:0 0 20px rgba(0,240,255,.3)}
+  92%{text-shadow:0 0 20px rgba(0,240,255,.3)}
+  93%{text-shadow:-2px 0 var(--mag),2px 0 var(--cyan)}
+  94%{text-shadow:0 0 20px rgba(0,240,255,.3)}
+  96%{text-shadow:2px 0 var(--mag),-2px 0 var(--cyan)}
+  97%{text-shadow:0 0 20px rgba(0,240,255,.3)}
+}
+.hdr-brand{animation:glitch 8s infinite}
+
+@media(max-width:1100px){.mn{grid-template-columns:300px 1fr}}
+@media(max-width:800px){.mn{grid-template-columns:1fr}.cht{display:none}}
+
+/* ===== Hidden Control Panel ===== */
+.ctrl-toggle{position:fixed;bottom:56px;right:16px;z-index:9999;width:36px;height:36px;
+  border:1px solid rgba(0,240,255,.2);background:rgba(2,4,8,.85);
+  color:var(--cyan);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  opacity:.25;transition:opacity .3s;backdrop-filter:blur(8px);
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.ctrl-toggle:hover{opacity:1}
+.ctrl-panel{position:fixed;bottom:56px;right:16px;z-index:9998;width:340px;
+  background:rgba(2,4,8,.95);border:1px solid rgba(0,240,255,.15);border-radius:var(--radius);
+  backdrop-filter:blur(20px);padding:20px;display:none;flex-direction:column;gap:14px;
+  box-shadow:0 8px 40px rgba(0,0,0,.6),inset 0 0 30px rgba(0,240,255,.02)}
+.ctrl-panel.open{display:flex}
+.ctrl-title{font-family:'Orbitron';font-size:9px;font-weight:600;letter-spacing:3px;color:var(--cyan);
+  display:flex;align-items:center;justify-content:space-between;
+  text-shadow:0 0 8px rgba(0,240,255,.3)}
+.ctrl-title span{font-family:'Rajdhani';font-size:9px;color:var(--text3);letter-spacing:1px}
+.ctrl-input{width:100%;padding:10px 14px;border-radius:var(--radius);border:1px solid rgba(0,240,255,.15);
+  background:rgba(0,240,255,.03);color:var(--text);font-size:14px;font-family:'Rajdhani',sans-serif;outline:none;
+  transition:border-color .3s}
+.ctrl-input:focus{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,240,255,.1)}
+.ctrl-input::placeholder{color:var(--text3)}
+.ctrl-btns{display:flex;gap:8px;flex-wrap:wrap}
+.ctrl-btn{padding:6px 14px;border-radius:var(--radius);border:1px solid rgba(0,240,255,.12);
+  background:rgba(0,240,255,.03);color:var(--text2);font-size:11px;cursor:pointer;
+  font-family:'Rajdhani',sans-serif;transition:all .2s;letter-spacing:.5px}
+.ctrl-btn:hover{background:rgba(0,240,255,.08);border-color:rgba(0,240,255,.3);color:var(--cyan)}
+.ctrl-btn.primary{background:rgba(0,240,255,.08);border-color:rgba(0,240,255,.25);color:var(--cyan)}
+.ctrl-btn.primary:hover{background:rgba(0,240,255,.15)}
+.ctrl-btn.danger{border-color:rgba(255,0,170,.2);color:var(--mag)}
+.ctrl-btn.danger:hover{background:rgba(255,0,170,.08)}
+.ctrl-sep{height:1px;background:linear-gradient(90deg,transparent,rgba(0,240,255,.1),transparent)}
+.ctrl-hint{font-size:10px;color:var(--text3);line-height:1.6}
+.ctrl-hint kbd{padding:1px 5px;border-radius:2px;border:1px solid rgba(0,240,255,.15);
+  background:rgba(0,240,255,.05);font-size:9px;font-family:'Orbitron'}
+.ctrl-history{max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;
+  scrollbar-width:thin;scrollbar-color:rgba(0,240,255,.15) transparent}
+.ctrl-history::-webkit-scrollbar{width:2px}
+.ctrl-history::-webkit-scrollbar-thumb{background:rgba(0,240,255,.2)}
+.hist-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius);
+  border:1px solid rgba(0,240,255,.06);background:rgba(0,240,255,.02);cursor:pointer;
+  transition:all .2s;font-size:12px;color:var(--text2)}
+.hist-item:hover{background:rgba(0,240,255,.06);border-color:rgba(0,240,255,.2);color:var(--cyan)}
+.hist-item .hist-text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-item .hist-del{opacity:0;font-size:14px;color:var(--text3);cursor:pointer;
+  padding:0 4px;transition:opacity .2s,color .2s;flex-shrink:0}
+.hist-item:hover .hist-del{opacity:1}
+.hist-item .hist-del:hover{color:var(--mag)}
+.hist-empty{font-size:11px;color:var(--text3);text-align:center;padding:8px}
+.ctrl-panel{max-height:calc(100vh - 110px);overflow-y:auto}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-scan"></div>
+<div class="bg-vignette"></div>
+<canvas id="hexCanvas"></canvas>
+
+<div class="app">
+  <header class="hdr">
+    <div class="hdr-l">
+      <div class="hdr-logo">S</div>
+      <span class="hdr-brand">SEEDANCE</span>
+    </div>
+    <div class="hdr-c">
+      <div class="hdr-sep"></div>
+      <span class="hdr-prod">PRIMEBOT T1 · AI VIDEO SYSTEM</span>
+      <div class="hdr-sep"></div>
+    </div>
+    <div class="hdr-r">
+      <div class="hdr-mode">EXHIBITION</div>
+      <div class="hdr-clock" id="clock">--:--:--</div>
+    </div>
+  </header>
+
+  <div class="mn">
+    <div class="cht">
+      <div class="cht-hd">
+        <h3>COMMS LINK</h3>
+        <p>实时语音通讯记录 · Live Voice Feed</p>
+      </div>
+      <div class="cht-body" id="chatBody"></div>
+    </div>
+
+    <div class="dsp">
+      <!-- Standby -->
+      <div class="sb" id="vStandby">
+        <div class="sb-hex">
+          <div class="sb-hex-ring"></div><div class="sb-hex-ring"></div><div class="sb-hex-ring"></div>
+          <div class="sb-core"></div>
+        </div>
+        <h2>AI VIDEO ENGINE</h2>
+        <p>对机器人说出您的视频创意<br>AI 引擎将实时为您生成视觉作品</p>
+        <div class="sb-status"><div class="blink"></div>SYSTEM READY · LISTENING</div>
+      </div>
+
+      <!-- Progress -->
+      <div class="pg" id="vProgress">
+        <h2>PROCESSING</h2>
+        <div class="pg-ring">
+          <svg width="200" height="200" viewBox="0 0 200 200">
+            <defs><linearGradient id="cyberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00f0ff"/><stop offset="50%" stop-color="#ff00aa"/>
+              <stop offset="100%" stop-color="#00ff88"/>
+            </linearGradient></defs>
+            <circle class="pg-track" cx="100" cy="100" r="90"/>
+            <circle class="pg-fill" id="pRing" cx="100" cy="100" r="90"
+              stroke-dasharray="565.5" stroke-dashoffset="565.5" transform="rotate(-90 100 100)"/>
+          </svg>
+          <div class="pg-ctr">
+            <div class="pg-num" id="pNum">0%</div>
+            <div class="pg-lbl" id="pLbl">STANDBY</div>
+          </div>
+        </div>
+        <div class="pg-bar">
+          <div class="pg-steps" id="pSteps">
+            <div class="pg-step" data-s="0"><span>QUEUE</span></div>
+            <div class="pg-step" data-s="1"><span>GENERATE</span></div>
+            <div class="pg-step" data-s="2"><span>RENDER</span></div>
+            <div class="pg-step" data-s="3"><span>DONE</span></div>
+          </div>
+          <div class="pg-info" id="pInfo">初始化系统...</div>
+        </div>
+      </div>
+
+      <!-- Complete -->
+      <div class="cp" id="vComplete">
+        <div class="cp-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <h2>COMPLETE</h2>
+        <p>视频生成完毕 · 即将自动播放</p>
+      </div>
+
+      <!-- Video -->
+      <div class="vd" id="vVideo">
+        <video id="vid" playsinline></video>
+        <div class="vd-bar">
+          <div class="vd-tag">SEEDANCE AI OUTPUT</div>
+          <div class="vd-note">播放结束后自动返回待机</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ftr">
+    <div class="ftr-g">
+      <div class="ftr-i"><div class="ftr-d ok" id="dSys"></div><span id="lSys">SYS ONLINE</span></div>
+      <div class="ftr-i"><div class="ftr-d ok" id="dWifi"></div><span>WIFI</span></div>
+      <div class="ftr-i"><div class="ftr-d ok"></div><span>T1 LINK</span></div>
+    </div>
+    <div class="ftr-c">SEEDANCE × PRIMEBOT · CYBER DIVISION</div>
+    <div class="ftr-g">
+      <div class="ftr-i">V1.0.0</div>
+      <div class="ftr-i" id="lMode">ONLINE</div>
+    </div>
+  </footer>
+</div>
+
+<!-- Control Panel Toggle -->
+<button class="ctrl-toggle" id="ctrlToggle" title="控制面板 (~)">⚙</button>
+<!-- Control Panel -->
+<div class="ctrl-panel" id="ctrlPanel">
+  <div class="ctrl-title">CONTROL PANEL <span>按 ~ 隐藏</span></div>
+  <input class="ctrl-input" id="ctrlInput" type="text" placeholder="输入访客说的话，回车发送..." autocomplete="off">
+  <div class="ctrl-btns">
+    <button class="ctrl-btn primary" id="btnSend">发送指令</button>
+    <button class="ctrl-btn" id="btnAutoDemo">自动演示</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-title" style="font-size:8px">STAGE JUMP</div>
+  <div class="ctrl-btns">
+    <button class="ctrl-btn" onclick="jumpTo('standby')">待机</button>
+    <button class="ctrl-btn" onclick="jumpTo('queue')">排队中</button>
+    <button class="ctrl-btn" onclick="jumpTo('gen')">生成中</button>
+    <button class="ctrl-btn" onclick="jumpTo('render')">渲染中</button>
+    <button class="ctrl-btn" onclick="jumpTo('complete')">完成</button>
+    <button class="ctrl-btn" onclick="jumpTo('video')">播放视频</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-title" style="font-size:8px">HISTORY <span id="histCount" style="font-family:'Rajdhani';font-size:9px;color:var(--text3)"></span></div>
+  <div class="ctrl-history" id="histList"></div>
+  <div class="ctrl-btns"><button class="ctrl-btn danger" onclick="clearHistory()" style="font-size:10px;padding:4px 10px">清空历史</button></div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-btns"><button class="ctrl-btn danger" onclick="resetAll()">重置全部</button></div>
+  <div class="ctrl-hint"><kbd>~</kbd> 显示/隐藏 · <kbd>Enter</kbd> 发送 · <kbd>Esc</kbd> 关闭</div>
+</div>
+
+<script>
+// Clock
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false})},1000);
+document.getElementById('clock').textContent=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+
+// Hex particles
+const hc=document.getElementById('hexCanvas'),hx=hc.getContext('2d');
+let HW,HH;
+function hexResize(){HW=hc.width=innerWidth;HH=hc.height=innerHeight}
+addEventListener('resize',hexResize);hexResize();
+const hexes=[];
+for(let i=0;i<30;i++){
+  hexes.push({x:Math.random()*HW,y:Math.random()*HH,s:Math.random()*20+8,
+    a:Math.random()*.04+.01,vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,
+    rot:Math.random()*Math.PI,vr:(Math.random()-.5)*.005});
+}
+function drawHex(x,y,r,rot){
+  hx.beginPath();
+  for(let i=0;i<6;i++){const ang=rot+Math.PI/3*i;
+    i===0?hx.moveTo(x+r*Math.cos(ang),y+r*Math.sin(ang)):hx.lineTo(x+r*Math.cos(ang),y+r*Math.sin(ang))}
+  hx.closePath();
+}
+function animHex(){
+  hx.clearRect(0,0,HW,HH);
+  hexes.forEach(h=>{
+    h.x+=h.vx;h.y+=h.vy;h.rot+=h.vr;
+    if(h.x<-50)h.x=HW+50;if(h.x>HW+50)h.x=-50;
+    if(h.y<-50)h.y=HH+50;if(h.y>HH+50)h.y=-50;
+    drawHex(h.x,h.y,h.s,h.rot);
+    hx.strokeStyle=`rgba(0,240,255,${h.a})`;hx.lineWidth=.5;hx.stroke();
+  });
+  requestAnimationFrame(animHex);
+}
+animHex();
+
+// Chat
+const cb=document.getElementById('chatBody');
+function msg(side,text){
+  const d=document.createElement('div');d.className=`cm cm-${side}`;
+  const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML=`<div class="cm-tag">${side==='v'?'VISITOR':'T1 ROBOT'}</div>
+    <div class="cm-box">${text}</div><div class="cm-time">${t}</div>`;
+  cb.appendChild(d);cb.scrollTop=cb.scrollHeight;
+}
+function typ(on){
+  if(on){const d=document.createElement('div');d.className='typing-bar';d.id='tb';
+    d.innerHTML='<i></i><i></i><i></i><span>PROCESSING</span>';cb.appendChild(d);cb.scrollTop=cb.scrollHeight}
+  else{const e=document.getElementById('tb');if(e)e.remove()}
+}
+
+// Views
+const RC=2*Math.PI*90;
+function show(n){
+  ['vStandby','vProgress','vComplete','vVideo'].forEach(id=>{
+    const e=document.getElementById(id);e.style.display='none';e.classList.remove('active')});
+  const e=document.getElementById('v'+n.charAt(0).toUpperCase()+n.slice(1));
+  e.style.display='flex';e.classList.add('active');
+}
+function pct(p){document.getElementById('pRing').style.strokeDashoffset=RC*(1-p/100);
+  document.getElementById('pNum').textContent=Math.round(p)+'%'}
+function stage(i){
+  const lbl=['QUEUED','GEN','RENDER','DONE'];
+  document.getElementById('pLbl').textContent=lbl[i]||'';
+  document.querySelectorAll('.pg-step').forEach((s,j)=>{
+    s.classList.remove('on','ok');if(j<i)s.classList.add('ok');if(j===i)s.classList.add('on')});
+}
+
+// Demo
+const VID='https://www.w3schools.com/html/mov_bbb.mp4';
+let run=false,timers=[];
+function clearTimers(){timers.forEach(t=>clearTimeout(t));timers=[]}
+
+function demo(userText){
+  if(run)return;run=true;clearTimers();cb.innerHTML='';
+  const txt=userText||'你好，请帮我生成一个30秒的视频，内容是太空站环绕地球';
+  timers.push(setTimeout(()=>msg('v',txt),800));
+  timers.push(setTimeout(()=>typ(true),1600));
+  timers.push(setTimeout(()=>{typ(false);msg('r','指令已接收。正在启动 SeeDance AI 引擎，预计耗时10-15分钟。')},3000));
+  timers.push(setTimeout(()=>{show('progress');stage(0);pct(0);document.getElementById('pInfo').textContent='建立云端连接...'},4200));
+  timers.push(setTimeout(()=>{pct(8);document.getElementById('pInfo').textContent='任务已入队，等待 GPU 分配...'},5500));
+  timers.push(setTimeout(()=>{stage(1);pct(18);document.getElementById('pInfo').textContent='解析视频描述 prompt...'},9000));
+  [{p:28,d:'生成 3D 场景模型...',t:13000},{p:38,d:'构建纹理与材质...',t:17000},
+   {p:50,d:'计算运动轨迹...',t:21000},{p:60,d:'渲染光照与粒子...',t:25000},
+   {p:70,d:'合成视频帧序列...',t:29000}].forEach(s=>timers.push(setTimeout(()=>{pct(s.p);document.getElementById('pInfo').textContent=s.d},s.t)));
+  timers.push(setTimeout(()=>{stage(2);pct(78);document.getElementById('pInfo').textContent='最终渲染 pass 1/2...'},33000));
+  timers.push(setTimeout(()=>{pct(88);document.getElementById('pInfo').textContent='最终渲染 pass 2/2...'},37000));
+  timers.push(setTimeout(()=>{pct(96);document.getElementById('pInfo').textContent='编码 H.264 & 上传...'},41000));
+  timers.push(setTimeout(()=>{stage(3);pct(100);document.getElementById('pInfo').textContent='GENERATION COMPLETE'},45000));
+  timers.push(setTimeout(()=>{show('complete');msg('r','视频生成完毕！即将播放，请观看。')},47000));
+  timers.push(setTimeout(()=>{show('video');const v=document.getElementById('vid');v.src=VID;v.play().catch(()=>{});
+    v.onended=()=>setTimeout(()=>{show('standby');run=false},3000)},50000));
+}
+
+function jumpTo(s){
+  clearTimers();run=true;
+  if(s==='standby'){show('standby');run=false;return}
+  if(s==='queue'){show('progress');stage(0);pct(5);document.getElementById('pInfo').textContent='排队等待中...';return}
+  if(s==='gen'){show('progress');stage(1);pct(40);document.getElementById('pInfo').textContent='AI 生成中...';return}
+  if(s==='render'){show('progress');stage(2);pct(78);document.getElementById('pInfo').textContent='渲染中...';return}
+  if(s==='complete'){show('progress');stage(3);pct(100);document.getElementById('pInfo').textContent='COMPLETE';
+    setTimeout(()=>{show('complete');msg('r','视频生成完毕！')},800);
+    setTimeout(()=>{show('video');const v=document.getElementById('vid');v.src=VID;v.play().catch(()=>{});
+      v.onended=()=>setTimeout(()=>{show('standby');run=false},3000)},2500);return}
+  if(s==='video'){show('video');const v=document.getElementById('vid');v.src=VID;v.play().catch(()=>{});
+    v.onended=()=>setTimeout(()=>{show('standby');run=false},3000);return}
+}
+function resetAll(){clearTimers();run=false;cb.innerHTML='';show('standby')}
+
+// Control Panel
+const cp=document.getElementById('ctrlPanel'),ci=document.getElementById('ctrlInput'),ct=document.getElementById('ctrlToggle');
+function togglePanel(){cp.classList.toggle('open')}
+ct.addEventListener('click',togglePanel);
+document.addEventListener('keydown',e=>{
+  if(e.key==='`'||e.key==='~'){e.preventDefault();togglePanel();if(cp.classList.contains('open'))ci.focus()}
+  if(e.key==='Escape'&&cp.classList.contains('open'))cp.classList.remove('open')});
+function sendCmd(){const t=ci.value.trim();if(!t)return;addHistory(t);resetAll();setTimeout(()=>demo(t),300);ci.value=''}
+document.getElementById('btnSend').addEventListener('click',sendCmd);
+ci.addEventListener('keydown',e=>{if(e.key==='Enter')sendCmd()});
+document.getElementById('btnAutoDemo').addEventListener('click',()=>{resetAll();setTimeout(()=>demo(),300)});
+
+// ===== History =====
+const HIST_KEY='seedance_exhibition_history';
+function getHistory(){try{return JSON.parse(localStorage.getItem(HIST_KEY))||[]}catch{return[]}}
+function saveHistory(list){localStorage.setItem(HIST_KEY,JSON.stringify(list.slice(0,30)))}
+function addHistory(text){const list=getHistory().filter(h=>h!==text);list.unshift(text);saveHistory(list);renderHistory()}
+function delHistory(idx){const list=getHistory();list.splice(idx,1);saveHistory(list);renderHistory()}
+function clearHistory(){localStorage.removeItem(HIST_KEY);renderHistory()}
+function renderHistory(){
+  const list=getHistory(),el=document.getElementById('histList'),cnt=document.getElementById('histCount');
+  cnt.textContent=list.length?`${list.length} 条`:'';
+  if(!list.length){el.innerHTML='<div class="hist-empty">暂无历史记录</div>';return}
+  el.innerHTML=list.map((h,i)=>`<div class="hist-item" onclick="useHistory(${i})">
+    <span class="hist-text" title="${h.replace(/"/g,'&quot;')}">${h}</span>
+    <span class="hist-del" onclick="event.stopPropagation();delHistory(${i})">×</span></div>`).join('');
+}
+function useHistory(idx){const list=getHistory();if(list[idx]){resetAll();setTimeout(()=>demo(list[idx]),300)}}
+renderHistory();
+
+// Network
+function net(){const on=navigator.onLine;
+  document.getElementById('dSys').className='ftr-d '+(on?'ok':'err');
+  document.getElementById('lSys').textContent=on?'SYS ONLINE':'OFFLINE';
+  document.getElementById('dWifi').className='ftr-d '+(on?'ok':'err');
+  document.getElementById('lMode').textContent=on?'ONLINE':'DEMO MODE'}
+addEventListener('online',net);addEventListener('offline',net);net();
+</script>
+</body>
+</html>

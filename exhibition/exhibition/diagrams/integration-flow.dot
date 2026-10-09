@@ -1,0 +1,56 @@
+digraph exhibition_demo_integration {
+  rankdir=TB;
+  fontname="Helvetica";
+  bgcolor="#0a0e1a";
+  label="SeeDance x 启元T1 展会演示系统 · 三方联调数据流（目标态设计）\n2026-10-08 · flow-visualizer + graphviz · 实线=已实现/同步调用, 虚线=待开发/异步返回";
+  labelloc="t";
+  labeljust="l";
+  fontcolor="#e8ecf4";
+  fontsize=13;
+
+  node [fontname="Helvetica", fontsize=11, fontcolor="#e8ecf4", style="filled", fillcolor="#111832", color="#4a5568"];
+  edge [fontname="Helvetica", fontsize=9, fontcolor="#8892a8", color="#4a5568"];
+
+  visitor [shape=box, style="rounded,filled", fillcolor="#1a6bff", fontcolor="#ffffff", label="展会访客\n(对机器人说话)"];
+
+  subgraph cluster_robot {
+    label="机器人侧 (Python) — 机器人团队";
+    style="dashed"; color="#00d4ff"; fontcolor="#00d4ff"; fontsize=11;
+    robot_voice [shape=box, label="① 语音转文字\n(已有能力 · high)"];
+    robot_submit [shape=box, label="② POST /api/v1/demo/submit\n{ text }  (待开发 · assumed)"];
+  }
+
+  subgraph cluster_backend {
+    label="后端中转站 / 白板 (Java) — 后端团队";
+    style="dashed"; color="#c9a84c"; fontcolor="#c9a84c"; fontsize=11;
+    be_submit [shape=box, label="接收 submit\nround+1 · phase=generating\n追加固定 bot 话术 (待开发)"];
+    be_store [shape=cylinder, fillcolor="#0d1225", label="演示状态存储\nround/phase/messages/videoUrl\n(内存或DB · 待开发)"];
+    be_gen [shape=box, label="调 SeeDance 生成\n+ 轮询任务结果\n(已有对接 · medium)"];
+    be_state_api [shape=box, label="GET /api/v1/demo/state\n返回当前状态 (待开发)"];
+  }
+
+  seedance [shape=component, fillcolor="#0d1225", color="#c9a84c", label="SeeDance 视频生成平台\n(外部系统)"];
+
+  subgraph cluster_front {
+    label="展示页面 (HTML/JS) — 前端(你)";
+    style="dashed"; color="#22c55e"; fontcolor="#22c55e"; fontsize=11;
+    fe_poll [shape=box, label="每 0.5s 轮询 state\n(已实现 · high)"];
+    fe_render [shape=box, label="handleState 渲染\n对话气泡 / 假进度95%保持 / 播放\n(已实现 · high)"];
+    screen [shape=box, style="rounded,filled", fillcolor="#0d1225", color="#22c55e", label="展会大屏画面\n(HDMI 输出)"];
+  }
+
+  visitor -> robot_voice [label="说话", color="#1a6bff"];
+  robot_voice -> robot_submit [label="识别文字"];
+  robot_submit -> be_submit [label="POST submit (writes)", color="#00d4ff"];
+  be_submit -> be_store [label="写入本轮状态"];
+  be_submit -> be_gen [label="触发生成"];
+  be_gen -> seedance [label="POST /generate (calls)", color="#c9a84c"];
+  be_gen -> seedance [label="GET /tasks/{id} 轮询 (reads)", style="dashed"];
+  seedance -> be_gen [label="videoUrl / 状态", style="dashed"];
+  be_gen -> be_store [label="phase=ready + videoUrl\n(失败→phase=failed)"];
+  be_state_api -> be_store [label="读取", style="dashed"];
+  fe_poll -> be_state_api [label="GET state 每0.5s (reads)", color="#22c55e"];
+  be_state_api -> fe_poll [label="JSON", style="dashed"];
+  fe_poll -> fe_render [label="状态变化"];
+  fe_render -> screen [label="渲染", color="#22c55e"];
+}
