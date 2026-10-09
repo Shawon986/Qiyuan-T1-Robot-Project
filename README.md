@@ -38,8 +38,8 @@ Qiyuan-T1-Robot-Project/
 ├── README.md              # this file
 ├── docs/                  # plan, execution log, guides
 ├── scripts/               # setup/build helper scripts (reproducible environment)
-├── apps/                  # our ROS 2 application packages (t1_monitor, ...)
-├── web/                   # web pages (e.g. SeeDance status page, served from the robot skill)
+├── apps/                  # our ROS 2 application packages (demo_ui, seedance, conversation, t1_monitor)
+├── exhibition/            # the exhibition demo pages + contract v2.0 (served by demo_ui on :8765)
 └── evidence/              # test evidence packs (SHA, firmware, IPs, QoS, logs)
 ```
 
