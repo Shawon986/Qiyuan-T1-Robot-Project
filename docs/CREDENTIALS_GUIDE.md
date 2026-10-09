@@ -86,6 +86,9 @@ Portal account is already created (robot IP `10.1.1.100` registered).
    - List of available **preset motion IDs** (for dancing)
    - Confirm the camera topic `/aima/hal/camera/head_stereo_left_orin` and audio
      topic `/aima/hal/audio/capture` are enabled in Develop+Basic mode
+   - **Screen playback** (for rendering generated videos on the robot display): which SDK
+     interface plays a video file on the robot's screen (service/topic, formats, resolution)?
+     Does the brain board have direct internet access for downloading result URLs?
 
 **Deliverables:** SSH credentials + answers to the four questions
 
