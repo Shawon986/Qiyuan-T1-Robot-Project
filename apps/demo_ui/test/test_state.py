@@ -75,5 +75,35 @@ class TestEventDispatch(unittest.TestCase):
         self.assertEqual(snap["result_url"], "https://x/y.mp4")
 
 
+class TestVideoRequest(unittest.TestCase):
+    """Option B: the robot asks the PAGE to generate. The page auto-submits
+    unseen requests and reports its task state back."""
+
+    def test_new_request_replaces_pending(self):
+        s = SessionState()
+        s.video_request("req-1", "dance video")
+        s.video_request("req-2", "another video")
+        snap = s.snapshot()
+        self.assertEqual(snap["pending_request"]["id"], "req-2")
+        self.assertEqual(snap["pending_request"]["prompt"], "another video")
+
+    def test_page_reports_task_back(self):
+        s = SessionState()
+        s.video_request("req-1", "dance video")
+        # the page auto-submits and reports its task state back
+        s.video_start("cgt-123")
+        s.video_result("cgt-123", "https://x/out.mp4")
+        snap = s.snapshot()
+        self.assertEqual(snap["task_status"], "succeeded")
+        self.assertEqual(snap["result_url"], "https://x/out.mp4")
+        # dialogues and pending request survive independently
+        self.assertEqual(snap["pending_request"]["id"], "req-1")
+
+    def test_handle_video_request(self):
+        s = SessionState()
+        s.handle("video_request", request_id="r9", prompt="make a video")
+        self.assertEqual(s.snapshot()["pending_request"]["prompt"], "make a video")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -23,6 +23,7 @@ class SessionState:
         self._current_task_id = ""
         self._task_status = "idle"
         self._result_url: str | None = None
+        self._pending_request: dict | None = None  # robot -> page: "please generate"
 
     # ---------------------------------------------------------------- dialogue
     def dialogue(self, speaker: str, text: str) -> None:
@@ -32,7 +33,17 @@ class SessionState:
             if len(self._dialogues) > self._max:
                 self._dialogues = self._dialogues[-self._max:]
 
-    # ------------------------------------------------------------------- video
+    # ------------------------------------------------------ robot -> page
+    def video_request(self, request_id: str, prompt: str) -> None:
+        """The robot asks the PAGE to generate a video (Option B: page generates).
+
+        A new request replaces the pending one; the page tracks the last seen
+        request_id and auto-submits only unseen requests.
+        """
+        with self._lock:
+            self._pending_request = {"id": request_id, "prompt": prompt, "ts": time.time()}
+
+    # ------------------------------------------------------ page -> robot
     def video_start(self, task_id: str) -> None:
         """Called BEFORE submitting a new generation. Clears the previous result."""
         with self._lock:
@@ -60,6 +71,7 @@ class SessionState:
         with self._lock:
             return {
                 "dialogues": list(self._dialogues),
+                "pending_request": dict(self._pending_request) if self._pending_request else None,
                 "current_task_id": self._current_task_id,
                 "task_status": self._task_status,
                 "result_url": self._result_url,
@@ -69,6 +81,8 @@ class SessionState:
         """Dispatch one event (used by POST /api/events)."""
         if kind == "dialogue":
             self.dialogue(payload["speaker"], payload["text"])
+        elif kind == "video_request":
+            self.video_request(payload["request_id"], payload["prompt"])
         elif kind == "video_start":
             self.video_start(payload["task_id"])
         elif kind == "video_status":

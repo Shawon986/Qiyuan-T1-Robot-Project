@@ -1,23 +1,35 @@
 # SeeDance Integration — Design & Implementation Plan
 
-## Page integration API (agreed 2026-10-09 — developer's page polls OUR endpoint)
+## Page integration API — FINAL Option B contract (2026-10-09)
 
-Robot app runs a small session API (no UI). The developer's page polls:
+**Architecture: the robot CONVERSES only; the PAGE generates automatically.**
+
+```
+USER speaks → ROBOT (ASR→LLM→TTS) → posts events to the session API
+PAGE polls the session API → auto-submits the video_request → generates → renders
+PAGE reports its task state back (POST /api/events) → robot can TTS "video ready"
+```
+
+Robot app runs the session API (no UI). The developer's page polls:
 
 ```
 GET http://<robot-or-pc-ip>:8765/api/session        (poll every 1-2 s, CORS enabled)
 → {
     "dialogues": [ {"speaker":"user|robot","text":"...","ts":...}, ... ],
-    "current_task_id": "cgt-...",
+    "pending_request": { "id":"req-...", "prompt":"...", "ts":... } | null,  ← robot asks the page
+    "current_task_id": "cgt-...",        ← set by the PAGE (feedback loop)
     "task_status": "idle|queued|running|succeeded|failed",
     "result_url": "https://..." | null
   }
-POST /api/events  {"kind":"dialogue|video_start|video_status|video_result", ...}   (optional push)
+POST /api/events  {"kind":"dialogue|video_request|video_start|video_status|video_result", ...}
 ```
 
-Stale-video guarantee (verified by unit + live tests): a new video request immediately clears
-`result_url`; late results for old tasks are ignored. Page renders ONLY
-`result_url` when it matches the current `current_task_id`.
+Page auto-submit rule: remember the last seen `pending_request.id`; when a new id appears,
+fill the prompt box and trigger the existing generate action. On `task_status == "succeeded"`
+render `result_url` (guard: only while it belongs to the current task — verified by tests).
+
+Stale-video guarantee (verified by unit + live tests): a new video request clears the previous
+`result_url`; late results for old tasks are ignored.
 
 ## Demo UX (confirmed 2026-10-09): three interacting parties
 
