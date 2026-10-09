@@ -195,6 +195,17 @@
 4. User filled TOS credentials + bucket `qiyuanseedance` (ap-southeast-1) created; endpoint format
    `https://tos-s3-ap-southeast-1.bytepluses.com` recorded.
 
+## 2026-10-09 — Phase 18: Full audit (start of plan Day 1)
+
+1. Environment audit passed: both SDK overlays built (git-pinned + portal v1.0.0.0); ROS packages
+   resolvable (aimdk_msgs, ruckig_for_primebot, seedance, t1_monitor); tests 16/16 + 6/6; tools
+   present (usbip/ros2/colcon/git); UDP buffers applied; usbipd + vhci-hcd ready.
+2. `.env` status: SEEDANCE + TOS + inbox filled ✅; iFlytek, DashScope, robot SSH pending.
+3. Git: commits 7b8f540 + 3667f69 still unpushed (GitHub intermittently unreachable from the user's
+   network; retry when proxy connectivity returns).
+4. Roadmap set: PC-side builds next (conversation adapters + follow-and-film vision + dance
+   timeline); robot phase waits on PrimeBot credentials + USB adapter.
+
 ## Status & next steps
 
 | Item | Status |
