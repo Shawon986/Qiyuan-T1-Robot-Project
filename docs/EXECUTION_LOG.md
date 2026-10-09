@@ -311,7 +311,7 @@
 3. Built `conversation/volc_tts.py` (VolcTTS + pure NDJSON parser); engine.speak() now prefers
    BytePlus (Cantonese mp3) and falls back to iFlytek. **23/23 tests**.
 4. Conversation loop now complete: AIChain ASR (zh-HK) → Cantonese NLU → BytePlus Cantonese TTS.
-   Pending: user's ear confirmation of the mp3 accent.
+   **User confirmed the voice sounds Cantonese** — the conversation feature is fully live.
 
 ## Status & next steps| Item | Status |
 |---|---|
