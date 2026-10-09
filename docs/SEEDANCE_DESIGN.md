@@ -31,6 +31,21 @@ render `result_url` (guard: only while it belongs to the current task — verifi
 Stale-video guarantee (verified by unit + live tests): a new video request clears the previous
 `result_url`; late results for old tasks are ignored.
 
+## Page patch spec (audited 2026-10-09 against their index.html)
+
+The page's existing generate flow is fully reusable (buildBody → newWork → submit → finish →
+works list `<video src=w.videoUrl>` at line ~1128). Required additions:
+
+1. **Dialogue box**: chat panel + `addChatLine(speaker, text)` (absent in the current file).
+2. **Robot address setting**: `robotBase` field (default `http://<pc-or-robot-ip>:8765`).
+3. **Poll + auto-submit** (core, ~15 lines): poll `/api/session` every 1.5 s; render new dialogue
+   lines; when `pending_request.id` is new → `els.prompt.value = req.prompt; els.btnGen.click();`
+   (reuses the existing validated generate handler — no refactor needed).
+4. **Auto-show finished video**: on `succeeded`, scroll/play the latest `w.videoUrl`
+   (currently it needs a manual thumbnail click).
+5. **(Optional) Feedback**: POST `video_start/video_status/video_result` to `/api/events`
+   so the robot can TTS-announce completion.
+
 ## Demo UX (confirmed 2026-10-09): three interacting parties
 
 ```
