@@ -206,6 +206,18 @@
 4. Roadmap set: PC-side builds next (conversation adapters + follow-and-film vision + dance
    timeline); robot phase waits on PrimeBot credentials + USB adapter.
 
+## 2026-10-09 — Phase 19: Session API for the developer's page (dialogue + video state)
+
+1. Per the developer's request, built the polling endpoint INSIDE the robot app (`apps/demo_ui`,
+   repurposed to a pure session API — no UI page): `GET /api/session` snapshot
+   (dialogues + current_task_id + task_status + result_url), optional `POST /api/events`, CORS enabled.
+2. **Stale-video guarantee implemented + verified**: `video_start(new_task)` clears the previous
+   result immediately; late results for old tasks are ignored (7/7 unit tests incl. the developer's
+   exact two-request scenario; live smoke test confirmed: task 2 start → `result_url: null`).
+3. Colcon build clean (3 packages). Flask/Flask-Sock installed (3.1.3/0.7.0, TUNA mirror).
+4. Contract documented in SEEDANCE_DESIGN.md for the developer: poll every 1–2 s; render only the
+   result matching `current_task_id`.
+
 ## Status & next steps
 
 | Item | Status |

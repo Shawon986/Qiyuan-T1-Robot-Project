@@ -1,5 +1,39 @@
 # SeeDance Integration — Design & Implementation Plan
 
+## Page integration API (agreed 2026-10-09 — developer's page polls OUR endpoint)
+
+Robot app runs a small session API (no UI). The developer's page polls:
+
+```
+GET http://<robot-or-pc-ip>:8765/api/session        (poll every 1-2 s, CORS enabled)
+→ {
+    "dialogues": [ {"speaker":"user|robot","text":"...","ts":...}, ... ],
+    "current_task_id": "cgt-...",
+    "task_status": "idle|queued|running|succeeded|failed",
+    "result_url": "https://..." | null
+  }
+POST /api/events  {"kind":"dialogue|video_start|video_status|video_result", ...}   (optional push)
+```
+
+Stale-video guarantee (verified by unit + live tests): a new video request immediately clears
+`result_url`; late results for old tasks are ignored. Page renders ONLY
+`result_url` when it matches the current `current_task_id`.
+
+## Demo UX (confirmed 2026-10-09): three interacting parties
+
+```
+USER speaks (Cantonese, wake word 机器人)
+  → ROBOT: ASR → Qwen LLM → TTS reply ("好的，马上为您生成")
+  → ROBOT: submits to Seedance (15s video), streams events to the PAGE
+  → PAGE: renders the dialogue live + plays the generated video (URL passed to page)
+```
+
+- Page: served by our skill (`apps/demo_ui`, Flask + WebSocket) — chat bubbles + status + video player.
+- Duration: `duration` param added to the client; 15s support to be live-verified per model tier
+  (2.0 series may cap at 5/10s — fall back to the max supported or use the 2.5 tier).
+- Everything PC-testable: WSL mic/speakers (WSLg) + Seedance + browser page.
+
+
 ## CONFIRMED API — VALIDATED END-TO-END with live key (2026-10-08)
 
 - Seedance model is hosted on **BytePlus ModelArk**: base `https://ark.ap-southeast.bytepluses.com/api/v3`
