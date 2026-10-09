@@ -53,4 +53,6 @@ class DemoController:
             url = self._generator(text)
             self.rounds.finish_ready(r, url)
         except Exception as exc:
+            # Log the real reason server-side (the page intentionally shows fallbacks only)
+            print(f"[demo] round {r} generation failed: {type(exc).__name__}: {exc}", flush=True)
             self.rounds.finish_failed(r, f"upstream_error: {type(exc).__name__}")

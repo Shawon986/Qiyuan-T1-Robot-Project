@@ -274,9 +274,20 @@
    the frontend developer).
 3. Remaining: ASR voice trigger (iFlytek keys), A7/A10 with the developer, robot-day integration.
 
-## Status & next steps
+## 2026-10-09 — Phase 24: Batch prompt testing (8 prompts, all at 15s/16:9 on 2.5)
 
-| Item | Status |
+1. User's demo test revealed a generation failure (`OutputVideoSensitiveContentDetected.PolicyViolation`)
+   — the page correctly played offline fallbacks (fail-closed design proven live). Added server-side
+   failure logging to the controller.
+2. User-approved batch test of 8 prompts (concurrent, 15s/16:9): **8/8 succeeded** (178–259 s each),
+   including the realistic-human control in Chinese. Insight: the filter checks the OUTPUT video
+   (random per generation) — short English "a man is running" failed once, but equivalent prompts
+   can pass; scenic/cartoon prompts are consistently safe (7/7). Exhibition guidance: prefer
+   cartoon/scenic prompts; keep realistic-human prompts out of the live demo.
+3. Recommended demo prompt list locked (the 7 safe prompts); themed fallback videos can be
+   pre-generated to replace the default cat fallback.
+
+## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
 | TUNA/USTC mirror plumbing (apt, rosdep, pip) | ✅ permanent |

@@ -19,6 +19,24 @@ from flask import Flask, send_from_directory
 from .controller import DemoController
 from .protocol import RoundManager, pong_msg, system_msg
 
+
+def _load_env_file(path: str) -> None:
+    p = Path(path)
+    if not p.is_file():
+        return
+    for line in p.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip()
+        if key and value:
+            os.environ.setdefault(key, value)
+
+
+_load_env_file(r"D:\Qiyuan T1 Robotics project\.env")
+_load_env_file("/mnt/d/Qiyuan T1 Robotics project/.env")
+
 app = Flask(__name__)
 sock = None  # set up in main() after the flask_sock import
 PAGES_DIR: str | None = None
