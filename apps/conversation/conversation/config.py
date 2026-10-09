@@ -34,10 +34,8 @@ class ConversationConfig:
         self.tts_voice = env.get("IFLYTEK_TTS_VOICE", "x_xiaoyan")  # set to a Cantonese voice code
         # LLM: default = DeepSeek V4.1 Flash on the user's existing BytePlus ModelArk account
         # (no separate Aliyun/DashScope account needed). Any OpenAI-compatible endpoint works.
-        self.llm_endpoint = env.get(
-            "LLM_ENDPOINT", "https://ark.ap-southeast.bytepluses.com/api/v3/chat/completions"
-        )
-        self.llm_model = env.get("LLM_MODEL", "deepseek-v4-1-flash-260910")
+        self.llm_endpoint = env.get("LLM_ENDPOINT") or "https://ark.ap-southeast.bytepluses.com/api/v3/chat/completions"
+        self.llm_model = env.get("LLM_MODEL") or "deepseek-v4-1-flash-260910"
         self.llm_api_key = (
             env.get("LLM_API_KEY")
             or env.get("DASHSCOPE_API_KEY")
