@@ -34,13 +34,18 @@ class SessionMemory:
         self._messages = []
 
 
-class QwenClient:
-    """Minimal OpenAI-compatible chat client for DashScope (no extra deps)."""
+class LlmClient:
+    """Minimal OpenAI-compatible chat client (DeepSeek on ModelArk by default).
+
+    Works with any OpenAI-compatible endpoint configured via LLM_ENDPOINT/LLM_MODEL/LLM_API_KEY.
+    """
 
     def __init__(self, cfg: ConversationConfig | None = None) -> None:
         self.cfg = cfg or ConversationConfig()
-        if not self.cfg.dashscope_key:
-            raise LlmError("DASHSCOPE_API_KEY is not configured (check .env)")
+        if not self.cfg.llm_api_key:
+            raise LlmError(
+                "no LLM key configured (set LLM_API_KEY, DASHSCOPE_API_KEY or SEEDANCE_API_KEY)"
+            )
 
     def chat(self, messages: list[dict], timeout: float = 60.0) -> str:
         body = json.dumps({
@@ -53,7 +58,7 @@ class QwenClient:
             data=body,
             method="POST",
             headers={
-                "Authorization": f"Bearer {self.cfg.dashscope_key}",
+                "Authorization": f"Bearer {self.cfg.llm_api_key}",
                 "Content-Type": "application/json",
             },
         )

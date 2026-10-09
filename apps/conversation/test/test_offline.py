@@ -98,7 +98,8 @@ class TestConfig(unittest.TestCase):
         cfg = ConversationConfig(env={})
         self.assertFalse(cfg.ready())
         self.assertEqual(cfg.asr_accent, "cantonese")
-        self.assertEqual(cfg.llm_model, "qwen-long")
+        self.assertEqual(cfg.llm_model, "deepseek-v3-2-251201")
+        self.assertIn("bytepluses", cfg.llm_endpoint)
         self.assertEqual(cfg.max_history_messages, 12)
 
     def test_ready(self):
@@ -106,6 +107,14 @@ class TestConfig(unittest.TestCase):
             "IFLYTEK_APPID": "a", "IFLYTEK_API_KEY": "b", "IFLYTEK_API_SECRET": "c",
             "DASHSCOPE_API_KEY": "d",
         })
+        self.assertTrue(cfg.ready())
+
+    def test_llm_key_falls_back_to_seedance(self):
+        cfg = ConversationConfig(env={
+            "IFLYTEK_APPID": "a", "IFLYTEK_API_KEY": "b", "IFLYTEK_API_SECRET": "c",
+            "SEEDANCE_API_KEY": "ark-key",
+        })
+        self.assertEqual(cfg.llm_api_key, "ark-key")
         self.assertTrue(cfg.ready())
 
 

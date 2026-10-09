@@ -13,7 +13,7 @@ import urllib.request
 from .asr import IflytekASR
 from .config import ConversationConfig
 from .intent import classify_intent, contains_wake_word, strip_wake_word
-from .llm import QwenClient, SessionMemory
+from .llm import LlmClient, SessionMemory
 from .tts import IflytekTTS
 
 
@@ -40,7 +40,7 @@ class ConversationEngine:
     def __init__(self, cfg: ConversationConfig | None = None, poster=None) -> None:
         self.cfg = cfg or ConversationConfig()
         self.memory = SessionMemory(self.cfg.system_prompt, self.cfg.max_history_messages)
-        self.llm = QwenClient(self.cfg)
+        self.llm = LlmClient(self.cfg)
         self.asr = IflytekASR(self.cfg)
         self.tts = IflytekTTS(self.cfg)
         self.poster = poster or HttpEventPoster(self.cfg.dialogue_api_base)
