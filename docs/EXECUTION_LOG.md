@@ -232,6 +232,18 @@
    note: `IFLYTEK_TTS_VOICE` must be set to a Cantonese voice code from the console (default is
    a placeholder Mandarin voice — live TTS test will confirm).
 
+## 2026-10-09 — Phase 21: Conversation LLM LIVE (DeepSeek V4.1 Flash on ModelArk)
+
+1. User created a ModelArk inference endpoint for **DeepSeek V4.1 Flash**
+   (`ep-20261009145036-zffrf`, ap-southeast). All chat models on the account previously 404'd
+   (InvalidEndpointOrModel.NotFound) — the endpoint resolved it.
+2. **Live test passed**: Cantonese prompt → DeepSeek replied in Cantonese
+   ("你好，我識講廣東話，有咩想問即管講啦。"). Config: LLM_MODEL=ep-..., LLM_API_KEY empty
+   (falls back to SEEDANCE_API_KEY). No Aliyun account needed.
+3. Fixed during the test: the endpoint ID was initially pasted into LLM_API_KEY (causing
+   401 "API key format is incorrect") — moved to LLM_MODEL. Config hardened with `or`-fallbacks.
+4. Remaining for live conversation: iFlytek keys only (ASR + TTS).
+
 ## Status & next steps
 
 | Item | Status |
