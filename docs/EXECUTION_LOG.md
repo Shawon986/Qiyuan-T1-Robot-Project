@@ -287,6 +287,18 @@
 3. Recommended demo prompt list locked (the 7 safe prompts); themed fallback videos can be
    pre-generated to replace the default cat fallback.
 
+## 2026-10-09 — Phase 25: AIChain live — Cantonese NLU working, TTS voice gap
+
+1. User created an AIChain (iFlytek AIUI overseas) app; built `conversation/aichain.py` (v2.1 spec:
+   checksum auth, session.config half-duplex, STT engine 5 zh-HK, NLU, TTS; 7 offline tests).
+2. Console steps resolved: app published (error 10004 → fixed), persona prompt changed to the
+   Cantonese Qiyuan robot → **live test: Cantonese NLU reply confirmed**
+   ("你好呀！原來你係啟元機器人，好巧好巧，我亦係啟元㗎！").
+3. **Gap**: no Cantonese TTS voice on AIChain (voice list lacks 粤语) — current TTS audio is Mandarin
+   voiceId 4. Two paths: developer confirms where the Cantonese voice is, or use the classic iFlytek
+   TTS (Cantonese voices exist) for the audio leg. Client already supports both.
+4. Classic WebAPI TTS activation still pending in the classic console (error 11200 licc failed).
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
