@@ -264,6 +264,16 @@
    aligned with the frontend; env ROBOT_ROUND_TIMEOUT_S), v3 page has no WS client (confirm which
    page is the demo one), live 15s paid generation test pending user approval.
 
+## 2026-10-09 — Phase 23: Live 15s/16:9 generation validated (Seedance 2.5)
+
+1. User-approved live test: model `dreamina-seedance-2-5-260628`, duration=15, ratio=16:9 →
+   task `cgt-20261009154611-cpj83` **succeeded**; real video URL returned.
+2. **Measured generation time: 251 s (~4.2 min)** — settles contract A8: the frozen 90 s
+   round watchdog is too short. Operational setting: `ROBOT_ROUND_TIMEOUT_S=360` (added to .env);
+   recommended contract amendment v2.1: page-side fallback 90 s → 360 s (must be agreed with
+   the frontend developer).
+3. Remaining: ASR voice trigger (iFlytek keys), A7/A10 with the developer, robot-day integration.
+
 ## Status & next steps
 
 | Item | Status |
