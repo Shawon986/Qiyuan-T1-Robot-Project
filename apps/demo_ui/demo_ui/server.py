@@ -60,6 +60,14 @@ def health():
     return {"ok": True, "service": "exhibition-robot-ws", "round": rounds.round}
 
 
+@app.route("/")
+def index():
+    """Landing goes straight to the confirmed demo page (v2 aurora flow)."""
+    from flask import redirect
+    target = os.environ.get("PAGE_INDEX", "v2-aurora-flow.html")
+    return redirect(f"/{target}")
+
+
 @app.route("/<path:filename>")
 def pages(filename):
     if not PAGES_DIR:
