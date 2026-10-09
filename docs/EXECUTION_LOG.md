@@ -299,6 +299,20 @@
    TTS (Cantonese voices exist) for the audio leg. Client already supports both.
 4. Classic WebAPI TTS activation still pending in the classic console (error 11200 licc failed).
 
+## 2026-10-09 — Phase 26: Cantonese TTS solved via BytePlus seed-tts (voice leg complete)
+
+1. Classic iFlytek TTS abandoned (11200 licc failed persisted despite console activations —
+   the streaming-service binding never took effect; not worth more time).
+2. BytePlus TTS (same account as ModelArk): unidirectional HTTP API
+   `voice.ap-southeast-1.bytepluses.com/api/v3/tts/unidirectional`. Discovered the
+   Cantonese speaker `zh_female_yueyunv_mars_bigtts` (温柔粤语) in the official voice list;
+   probed resource IDs: seed-tts-2.0 → 55000000 mismatch; **seed-tts-1.0 → audio OK**
+   (NDJSON streaming response, one JSON per line).
+3. Built `conversation/volc_tts.py` (VolcTTS + pure NDJSON parser); engine.speak() now prefers
+   BytePlus (Cantonese mp3) and falls back to iFlytek. **23/23 tests**.
+4. Conversation loop now complete: AIChain ASR (zh-HK) → Cantonese NLU → BytePlus Cantonese TTS.
+   Pending: user's ear confirmation of the mp3 accent.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |

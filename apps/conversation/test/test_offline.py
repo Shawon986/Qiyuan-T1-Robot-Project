@@ -120,3 +120,31 @@ class TestConfig(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestVolcTtsParsing(unittest.TestCase):
+    def test_ndjson_multiline(self):
+        from conversation.volc_tts import parse_ndjson_response
+        import base64
+        raw = (
+            json.dumps({"code": 0, "base64_resp": base64.b64encode(b"AAA").decode()}) + "\n"
+            + json.dumps({"code": 20000000, "base64_resp": base64.b64encode(b"BBB").decode()}) + "\n"
+            + json.dumps({"code": 20000000}) + "\n"
+        )
+        audio, errors = parse_ndjson_response(raw)
+        self.assertEqual(audio, b"AAABBB")
+        self.assertEqual(errors, [])
+
+    def test_ndjson_errors_collected(self):
+        from conversation.volc_tts import parse_ndjson_response
+        raw = json.dumps({"code": 55000000, "message": "mismatch"}) + "\n"
+        audio, errors = parse_ndjson_response(raw)
+        self.assertEqual(audio, b"")
+        self.assertEqual(len(errors), 1)
+        self.assertIn("55000000", errors[0])
+
+    def test_volc_config(self):
+        cfg = ConversationConfig(env={"VOLC_TTS_API_KEY": "k",
+                                      "VOLC_TTS_SPEAKER": "zh_female_yueyunv_mars_bigtts"})
+        self.assertEqual(cfg.volc_tts_speaker, "zh_female_yueyunv_mars_bigtts")
+        self.assertEqual(cfg.volc_tts_resource_id, "seed-tts-1.0")

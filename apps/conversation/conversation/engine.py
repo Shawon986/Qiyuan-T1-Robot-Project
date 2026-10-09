@@ -67,7 +67,10 @@ class ConversationEngine:
         return reply
 
     def speak(self, text: str) -> bytes:
-        """TTS the text; returns WAV bytes (caller plays or saves)."""
+        """Cantonese TTS: prefers BytePlus (VolcTTS, mp3) and falls back to iFlytek (WAV)."""
+        if self.cfg.volc_tts_api_key:
+            from .volc_tts import VolcTTS
+            return VolcTTS(self.cfg).synthesize(text)
         return self.tts.synthesize(text)
 
     def transcribe_file(self, audio_path: str) -> str:

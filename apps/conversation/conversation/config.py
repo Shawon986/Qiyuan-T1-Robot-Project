@@ -50,6 +50,14 @@ class ConversationConfig:
         self.aichain_stt_language = env.get("AICHAIN_STT_LANGUAGE", "zh-HK")  # Cantonese
         self.aichain_tts_voice_id = env.get("AICHAIN_TTS_VOICE_ID", "4")
         self.aichain_nlu_enabled = env.get("AICHAIN_NLU_ENABLED", "1") == "1"
+        # BytePlus TTS (Cantonese voice leg)
+        self.volc_tts_api_key = env.get("VOLC_TTS_API_KEY", "")
+        self.volc_tts_speaker = env.get("VOLC_TTS_SPEAKER", "zh_female_yueyunv_mars_bigtts")
+        self.volc_tts_endpoint = env.get(
+            "VOLC_TTS_ENDPOINT",
+            "https://voice.ap-southeast-1.bytepluses.com/api/v3/tts/unidirectional",
+        )
+        self.volc_tts_resource_id = env.get("VOLC_TTS_RESOURCE_ID", "seed-tts-1.0")
         # Behavior
         self.wake_words = [w for w in env.get("WAKE_WORDS", "机器人").split(",") if w]
         self.system_prompt = env.get(
