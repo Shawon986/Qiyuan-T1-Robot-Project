@@ -218,6 +218,20 @@
 4. Contract documented in SEEDANCE_DESIGN.md for the developer: poll every 1–2 s; render only the
    result matching `current_task_id`.
 
+## 2026-10-09 — Phase 20: Conversation module built (feature 1, Cantonese pipeline)
+
+1. Built `apps/conversation` (ament_python): `iflytek_auth.py` (HMAC-SHA256 WS auth, pure),
+   `asr.py` (IAT streaming ASR, accent=cantonese, wav/pcm file input, wpgs result parsing),
+   `tts.py` (TTS → WAV via aue=raw + header wrap), `llm.py` (Qwen via DashScope OpenAI-compatible
+   endpoint + SessionMemory window), `intent.py` (wake word 机器人 + generate_video/dance/stop/chat),
+   `engine.py` (turn loop posting dialogue/video_request events to the demo session API),
+   `main.py` CLI (--say / --asr / --full with paplay playback fallback).
+2. websocket-client 1.9.2 installed (TUNA). **12/12 offline tests** (auth format, frame statuses,
+   wpgs parsing, wake word, intents, memory window, wav header, config). Colcon: 4 packages clean.
+3. Live testing pending user keys: IFLYTEK_APPID/API_KEY/API_SECRET + DASHSCOPE_API_KEY in `.env`;
+   note: `IFLYTEK_TTS_VOICE` must be set to a Cantonese voice code from the console (default is
+   a placeholder Mandarin voice — live TTS test will confirm).
+
 ## Status & next steps
 
 | Item | Status |
