@@ -98,7 +98,7 @@ class TestConfig(unittest.TestCase):
         cfg = ConversationConfig(env={})
         self.assertFalse(cfg.ready())
         self.assertEqual(cfg.asr_accent, "cantonese")
-        self.assertEqual(cfg.llm_model, "deepseek-v3-2-251201")
+        self.assertEqual(cfg.llm_model, "deepseek-v4-1-flash-260910")
         self.assertIn("bytepluses", cfg.llm_endpoint)
         self.assertEqual(cfg.max_history_messages, 12)
 
