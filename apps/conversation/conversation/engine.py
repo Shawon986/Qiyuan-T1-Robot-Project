@@ -41,9 +41,23 @@ class ConversationEngine:
         self.cfg = cfg or ConversationConfig()
         self.memory = SessionMemory(self.cfg.system_prompt, self.cfg.max_history_messages)
         self.llm = LlmClient(self.cfg)
-        self.asr = IflytekASR(self.cfg)
-        self.tts = IflytekTTS(self.cfg)
+        # Classic iFlytek legs are optional now (AIChain + BytePlus cover the chain);
+        # construct them lazily so missing classic credentials never break startup.
+        self._asr = None
+        self._tts = None
         self.poster = poster or HttpEventPoster(self.cfg.dialogue_api_base)
+
+    @property
+    def asr(self):
+        if self._asr is None:
+            self._asr = IflytekASR(self.cfg)
+        return self._asr
+
+    @property
+    def tts(self):
+        if self._tts is None:
+            self._tts = IflytekTTS(self.cfg)
+        return self._tts
 
     def handle_user_text(self, text: str) -> str:
         """One conversational turn. Returns the robot's reply ('' if not addressed)."""
