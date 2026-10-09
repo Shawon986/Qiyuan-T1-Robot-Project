@@ -313,6 +313,15 @@
 4. Conversation loop now complete: AIChain ASR (zh-HK) → Cantonese NLU → BytePlus Cantonese TTS.
    **User confirmed the voice sounds Cantonese** — the conversation feature is fully live.
 
+## 2026-10-09 — Phase 27: Full Cantonese conversation verified end-to-end
+
+1. Fixed the .env platform mix-up (AIChain credentials had been pasted into the classic IFLYTEK_*
+   fields; cleared them, classic legs made lazy so they're fully optional).
+2. Full-chain live test: Cantonese question → AIChain ASR/NLU (remembered the visitor's name 阿强)
+   → BytePlus seed-tts Cantonese voice → **user listened and confirmed: "perfect, it's working well"**.
+3. All software features now confirmed working by the user: video demo (Seedance 15s on the v2 page)
+   and Cantonese conversation (AIChain + BytePlus).
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
