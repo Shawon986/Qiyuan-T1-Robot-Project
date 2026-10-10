@@ -21,3 +21,8 @@ Thumbs.db
 
 # Secrets
 .env
+
+# Vendor SDK artifacts (kept in WSL workspaces, not in git)
+sdk_t1-v1.0.0.0/
+sdk_t1-v1.0.0.0.zip
+exhibition.7z
