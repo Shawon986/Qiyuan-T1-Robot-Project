@@ -335,6 +335,16 @@
    playback module via PlayEmotion(file), (c) RTSP port 2554 in the network checklist, (d) trim the
    PrimeBot ticket (screen question now answered by the SDK).
 
+## 2026-10-10 — Phase 29: Session wrap-up — full state snapshot for handover
+
+1. **All software complete & user-verified**: Cantonese conversation (AIChain + BytePlus TTS), video demo
+   (final direct-mode flow: robot → wait phrase + taskId on :8766/demo/last → developer's page handles the rest),
+   exhibition contract v2.0 WS backup, monitoring package. 55 tests green.
+2. Code package for the developer: `D:\Qiyuan T1 Robotics project\Qiyuan-T1-Robot-Project-Code.zip`
+   (107 files; .env excluded).
+3. Pending: PrimeBot SSH creds + 3 questions; developer direct-mode integration check; robot days 4–5;
+   Oct 19 rehearsal. Full state also saved in Claude memory for session handover.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
