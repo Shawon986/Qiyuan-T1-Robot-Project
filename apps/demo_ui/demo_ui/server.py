@@ -86,19 +86,55 @@ def demo_last():
 
 
 def _last_json_handler_cls():
-    """Handler for the /demo/last JSON the page polls (direct mode)."""
+    """Handler for :8766 — serves /demo/last JSON (the page's direct-mode poll)
+    AND the exhibition page with its assets, so the developer's documented
+    on-site flow works: open http://<host>:8766/v2-aurora-flow.html and the
+    listener on this machine serves both the page and the JSON."""
     from http.server import BaseHTTPRequestHandler
     import json as _json
+    import mimetypes
 
     class LastJsonHandler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            body = _json.dumps(controller_mod.latest.get(), ensure_ascii=False).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
+        def _send(self, code: int, ctype: str, body: bytes) -> None:
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+
+        def _send_json(self, obj) -> None:
+            body = _json.dumps(obj, ensure_ascii=False).encode("utf-8")
+            self._send(200, "application/json; charset=utf-8", body)
+
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            if path == "/demo/last":
+                self._send_json(controller_mod.latest.get())
+                return
+            if path == "/health":
+                self._send_json({"ok": True, "service": "exhibition-robot-8766"})
+                return
+            self._serve_static(path)
+
+        def _serve_static(self, path: str) -> None:
+            rel = path.lstrip("/") or "v2-aurora-flow.html"
+            if not PAGES_DIR:
+                self._send(404, "text/plain; charset=utf-8", b"no page dir configured")
+                return
+            root = Path(PAGES_DIR).resolve()
+            target = (root / rel).resolve()
+            if not str(target).startswith(str(root)):
+                self._send(403, "text/plain; charset=utf-8", b"forbidden")
+                return
+            if not target.is_file():
+                self._send(404, "text/plain; charset=utf-8", b"not found")
+                return
+            mime, _ = mimetypes.guess_type(str(target))
+            ctype = mime or "application/octet-stream"
+            if ctype.startswith("text/"):
+                ctype += "; charset=utf-8"
+            self._send(200, ctype, target.read_bytes())
 
         def log_message(self, *args):
             pass

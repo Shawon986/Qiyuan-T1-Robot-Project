@@ -26,3 +26,11 @@ Thumbs.db
 sdk_t1-v1.0.0.0/
 sdk_t1-v1.0.0.0.zip
 exhibition.7z
+
+# Page secrets (developer red-line rule)
+exhibition/exhibition/ark-config.js
+ark-config.js
+
+# Developer page delivery archives (served copy lives in exhibition/exhibition/)
+exhibition-page-*
+*.7z

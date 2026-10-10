@@ -68,7 +68,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   border:1px solid rgba(0,255,200,.2);color:var(--aurora1)}
 
 /* ===== Main ===== */
-.main{display:grid;grid-template-columns:400px 1fr;overflow:hidden}
+/* 行轨必须显式写 minmax(0,1fr)：留空则是隐式 auto 轨，会被对话内容撑到一千多像素，
+   超出 .main 的部分被 overflow:hidden 无声裁掉 —— 表现为「消息越攒越多，最新几条永远看不见，滚动也滚不动」 */
+.main{display:grid;grid-template-columns:400px 1fr;grid-template-rows:minmax(0,1fr);overflow:hidden}
 
 /* ===== Chat ===== */
 .chat{display:flex;flex-direction:column;background:var(--glass);
@@ -246,6 +248,77 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .hist-item .hist-del:hover{color:#ff4466}
 .hist-empty{font-size:11px;color:var(--text3);text-align:center;padding:8px}
 .ctrl-panel{max-height:calc(100vh - 130px);overflow-y:auto}
+.ctrl-row{display:flex;align-items:center;gap:6px;margin:3px 0}
+.ctrl-row label{flex:0 0 82px;font-size:10px;color:var(--text3)}
+.ctrl-row input,.ctrl-row select{flex:1;min-width:0;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#e8f6ff;font-size:10px;padding:3px 6px}
+.ctrl-sw{display:flex;align-items:flex-start;gap:8px;margin:5px 0;font-size:11px;color:#cfe6f2;cursor:pointer}
+.ctrl-sw input{width:15px;height:15px;margin-top:1px;accent-color:#22d3ee;flex-shrink:0}
+.ctrl-sw i{display:block;font-style:normal;font-size:9px;line-height:1.45;color:var(--text3)}
+.ctrl-on{color:#22d3ee}
+</style>
+<!-- ===== 科技风加强层（纯 CSS，只加装饰不动布局） ===== -->
+<style id="tech-plus">
+.brand-sub{font-size:10px;letter-spacing:3px;color:var(--text3);align-self:flex-end;
+  padding-bottom:6px;border-left:1px solid var(--border2);padding-left:12px}
+
+/* 四角 HUD 框：收小并抬高下沿，避免压住底栏文字 */
+.hud{position:fixed;inset:16px 16px 62px;z-index:3;pointer-events:none}
+.hud-c{position:absolute;width:34px;height:34px;opacity:.32;animation:hudBreath 4.5s ease-in-out infinite}
+.hud-c.tl{top:0;left:0;border-top:2px solid var(--aurora1);border-left:2px solid var(--aurora1)}
+.hud-c.tr{top:0;right:0;border-top:2px solid var(--aurora2);border-right:2px solid var(--aurora2);animation-delay:-1.1s}
+.hud-c.bl{bottom:0;left:0;border-bottom:2px solid var(--aurora4);border-left:2px solid var(--aurora4);animation-delay:-2.2s}
+.hud-c.br{bottom:0;right:0;border-bottom:2px solid var(--aurora3);border-right:2px solid var(--aurora3);animation-delay:-3.3s}
+@keyframes hudBreath{0%,100%{opacity:.18}50%{opacity:.45}}
+
+/* 全屏慢扫光（屏幕"活着"的证据，不影响任何点击） */
+.scan{position:fixed;left:0;right:0;height:180px;z-index:2;pointer-events:none;opacity:.5;
+  background:linear-gradient(180deg,transparent,rgba(0,255,200,.05) 45%,rgba(123,97,255,.07) 55%,transparent);
+  animation:scanMove 9s linear infinite}
+@keyframes scanMove{0%{transform:translateY(-200px)}100%{transform:translateY(105vh)}}
+
+/* 顶栏/底栏 energized */
+.header{position:relative}
+.header::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--aurora1),var(--aurora2),var(--aurora3),transparent);
+  background-size:200% 100%;animation:brandShimmer 6s linear infinite;opacity:.55}
+.footer{position:relative}
+.footer::before{content:'';position:absolute;left:0;right:0;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,200,.5),transparent);
+  background-size:200% 100%;animation:brandShimmer 8s linear infinite}
+
+/* 对话流：最新一条高亮 + 侧向能量条 */
+.msg-left .msg-content{border-left:2px solid rgba(0,180,255,.55)}
+.msg-right .msg-content{border-right:2px solid rgba(0,255,200,.55)}
+.messages .msg:last-child .msg-content{animation:lastGlow 2.8s ease-in-out infinite}
+@keyframes lastGlow{0%,100%{box-shadow:0 0 0 rgba(0,255,200,0)}50%{box-shadow:0 0 26px rgba(0,255,200,.16)}}
+
+/* 待机区保持原样干净：不加雷达扇面和穿字的双环（试过，把标题压花了） */
+
+/* 进度环：外圈虚线转 + 数字发光 */
+.ring-container::before{content:'';position:absolute;inset:-26px;border-radius:50%;
+  border:1px dashed rgba(0,255,200,.2);animation:spin 14s linear infinite;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ring-pct{text-shadow:0 0 26px rgba(0,255,200,.5)}
+/* 保持态：数字不再来回跳，改由光环呼吸/扫圈表达"还在干活" */
+.progress-view.holding .ring-progress{animation:ringBreath 2.6s ease-in-out infinite}
+@keyframes ringBreath{0%,100%{filter:drop-shadow(0 0 6px rgba(0,255,200,.45))}
+  50%{filter:drop-shadow(0 0 24px rgba(123,97,255,.9))}}
+.progress-view.holding .ring-container::after{content:'';position:absolute;inset:-14px;border-radius:50%;
+  border:1px solid rgba(0,255,200,.16);animation:ringPing 3.2s ease-out infinite;pointer-events:none}
+@keyframes ringPing{0%{transform:scale(.9);opacity:.85}100%{transform:scale(1.16);opacity:0}}
+
+/* 流水线：已完成的连线跑光点 */
+.pipe-node.done .pipe-line{position:relative;overflow:hidden}
+.pipe-node.done .pipe-line::after{content:'';position:absolute;top:0;left:-40%;width:40%;height:100%;
+  background:linear-gradient(90deg,transparent,#fff,transparent);animation:pipeFlow 2.2s linear infinite}
+@keyframes pipeFlow{to{left:120%}}
+
+/* 视频页：四角取景框 + 细栅格 */
+.video-view{position:relative}
+.video-view::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,255,200,.035) 0 1px,transparent 1px 4px);
+  mix-blend-mode:screen}
 </style>
 </head>
 <body>
@@ -254,12 +327,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   <div class="aurora-blob"></div><div class="aurora-blob"></div>
 </div>
 <div class="grid-overlay"></div>
+<div class="scan"></div>
+<div class="hud"><i class="hud-c tl"></i><i class="hud-c tr"></i><i class="hud-c bl"></i><i class="hud-c br"></i></div>
 
 <div class="app">
   <header class="header">
     <div class="header-left">
-      <div class="logo-wrap"><div class="logo-bg"></div><div class="logo-letter">S</div></div>
-      <span class="brand-text">SeeDance</span>
+      <div class="logo-wrap"><div class="logo-bg"></div><div class="logo-letter">港</div></div>
+      <span class="brand-text">中国香港</span>
+      <span class="brand-sub">CHINA · HONG KONG</span>
     </div>
     <div class="header-center">
       <div class="header-line"></div>
@@ -333,7 +409,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
         <video id="vid" playsinline></video>
         <div class="video-bar">
           <span class="video-tag">SeeDance AI Generated</span>
-          <span class="video-note">播放结束后自动返回待机</span>
+          <span class="video-note" id="videoNote">播放结束后自动返回待机</span>
         </div>
       </div>
     </div>
@@ -379,6 +455,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
     <button class="ctrl-btn primary" onclick="simulateReady()">模拟视频就绪</button>
     <button class="ctrl-btn" onclick="pollNow()">立即问一次</button>
   </div>
+  <div class="ctrl-sep"></div>
+  <div class="ctrl-title" style="font-size:10px">现场参数 <span style="font-size:9px;color:var(--text3)">改完即时生效 · 存本机，下次开机自动带回</span></div>
+  <label class="ctrl-sw"><input type="checkbox" id="setRealOnly">
+    <span>真实模拟<i>开了就绝不放离线预录片：真片没到就一直等，等不到宁可回待机。彩排/断网演示请关掉它。</i></span></label>
+  <label class="ctrl-sw"><input type="checkbox" id="setRequireTaskId">
+    <span>只认本轮单号<i>开了只播「机器人这轮下的那一单」，别人的任务先跑完也不会误播。需要监听程序带回 taskId 且下单进程真下过单，否则本轮一定超时。</i></span></label>
+  <div class="ctrl-row"><label>模式</label><select id="setMode">
+    <option value="direct">direct 双轮询（现场主用）</option><option value="local">local 本机模拟</option>
+    <option value="ws">ws 机器人推送</option><option value="live">live Java 后端</option></select></div>
+  <div class="ctrl-row"><label>单轮超时(秒)</label><input type="number" id="setTimeoutSec" min="10" step="30"></div>
+  <div class="ctrl-row"><label>真实死等上限</label><input type="number" id="setRealMax" min="60" step="60"></div>
+  <div class="ctrl-row"><label>机器人地址</label><input type="text" id="setRobotUrl" spellcheck="false"></div>
+  <div class="ctrl-row"><label>机器人轮询(秒)</label><input type="number" id="setRobotInterval" min="0.5" step="0.5"></div>
+  <div class="ctrl-row"><label>等回话(秒)</label><input type="number" id="setReplyWait" min="0" step="1"></div>
+  <div class="ctrl-row"><label>SeeDance 端点</label><input type="text" id="setArkBase" spellcheck="false"></div>
+  <div class="ctrl-row"><label>模型名</label><input type="text" id="setArkModel" spellcheck="false"></div>
+  <div class="ctrl-row"><label>密钥</label><input type="password" id="setArkKey" placeholder="留点不动 = 沿用 ark-config.js" spellcheck="false"></div>
+  <div class="ctrl-row"><label>SD 轮询(秒)</label><input type="number" id="setArkInterval" min="0.5" step="0.5"></div>
+  <div class="ctrl-row"><label>列表条数</label><input type="number" id="setArkPageSize" min="1" max="50" step="1"></div>
+  <div class="ctrl-row"><label>离线片(逗号分隔)</label><input type="text" id="setFallbacks" spellcheck="false"></div>
+  <div class="ctrl-btns"><button class="ctrl-btn primary" onclick="applySettings()">应用并重接链路</button>
+    <button class="ctrl-btn" onclick="resetSettings()">恢复默认</button></div>
+  <div class="ctrl-hint" id="setHint"></div>
   <div class="ctrl-sep"></div>
   <div class="ctrl-title" style="font-size:10px">历史记录 <span id="histCount" style="font-size:9px;color:var(--text3)"></span></div>
   <div class="ctrl-history" id="histList"></div>
@@ -465,7 +564,10 @@ function view(name){
   el.style.display='flex';el.classList.add('active');
 }
 function showScreen(name){view(name)}
-function setPct(p){document.getElementById('ring').style.strokeDashoffset=C*(1-p/100);
+function setPct(p){
+  const cur=parseInt(document.getElementById('pct').textContent,10)||0;
+  if(p!==0&&p<cur)p=cur;   // 单调闸门：一轮之内进度只前进（回退会被观众看成穿帮），0 是起新轮的唯一例外
+  document.getElementById('ring').style.strokeDashoffset=C*(1-p/100);
   document.getElementById('pct').textContent=Math.round(p)+'%'}
 function setStage(i){
   const en=['QUEUED','GENERATING','RENDERING','COMPLETE'];
@@ -486,24 +588,43 @@ const _robot=_q.get('robot')||'';
 const _isHttp=_robot.startsWith('http');
 const _wsTarget=_q.get('ws')||(_robot&&!_isHttp?'ws://'+_robot+':8765':null);
 const _CFG=window.ARK_CFG||{};   // 密钥只在 ark-config.js（不进 Git）；URL 参数可临时覆盖
+// 控制面板改过的参数存本机（localStorage）：优先级 URL 参数 > 本机设置 > ark-config.js > 内置默认。
+// URL 参数保持毫秒口径不动（现场清单里那些地址不用改写），面板统一按「秒」填。
+const _SET=(()=>{try{return JSON.parse(localStorage.getItem('linkai.v2.settings')||'{}')}catch(e){return{}}})();
+const _sec=(urlMs,saveSec,defSec)=>{
+  const u=parseInt(_q.get(urlMs),10);if(u>0)return u;
+  const s=parseFloat(_SET[saveSec]);return s>0?Math.round(s*1000):defSec*1000};
+const _txt=(urlKey,saveKey,def)=>{
+  const u=_q.get(urlKey);if(u)return u;
+  const s=_SET[saveKey];return (typeof s==='string'&&s)?s:def};
+const _int=(urlKey,saveKey,def)=>{
+  const u=parseInt(_q.get(urlKey),10);if(u>0)return u;
+  const s=parseInt(_SET[saveKey],10);return s>0?s:def};
+const _bool=(urlKey,saveKey)=>{
+  const u=_q.get(urlKey);if(u==='1')return true;if(u==='0')return false;return !!_SET[saveKey]};
 const CONFIG={
-  mode:_q.get('mode')||(_CFG.mode)||(_q.has('live')?'live':(_wsTarget?'ws':'local')),
+  mode:_q.get('mode')||(typeof _SET.mode==='string'&&_SET.mode)||_CFG.mode||(_q.has('live')?'live':(_wsTarget?'ws':'local')),
   wsUrl:_wsTarget||_CFG.wsUrl||'ws://127.0.0.1:8765',
-  pollUrl:_q.get('poll')||_CFG.pollUrl||'/api/v1/demo/state',
-  pollInterval:parseInt(_q.get('interval')||'500',10),
-  robotUrl:_q.get('robotUrl')||(_isHttp?_robot:null)||_CFG.robotUrl||'http://127.0.0.1:8766/demo/last',
-  robotInterval:parseInt(_q.get('robotInterval')||'500',10),
-  arkBase:_q.get('arkBase')||_CFG.arkBase||'https://ark.cn-beijing.volces.com/api/v3',
-  arkKey:_q.get('arkKey')||_CFG.arkKey||'',           // 空 = 没配密钥，direct 模式到点放离线兜底片
-  arkModel:_q.get('arkModel')||_CFG.arkModel||'',     // 同一把 key 下挂着多个模型，必须锁定展会用的那个
-  arkInterval:parseInt(_q.get('arkInterval')||'2000',10),
-  arkPageSize:parseInt(_q.get('arkPageSize')||'20',10),
-  autoReadyMs:parseInt(_q.get('autoReady')||'0',10),
-  roundTimeoutMs:parseInt(_q.get('timeout')||'180000',10),   // 单轮超时：不外露报错，直接放离线片（契约 §1.4）。实测真片 137~211 秒才出，90 秒会把真结果判死
+  pollUrl:_txt('poll','pollUrl',_CFG.pollUrl||'/api/v1/demo/state'),
+  pollInterval:_sec('interval','pollIntervalSec',2),
+  robotUrl:_txt('robotUrl','robotUrl',(_isHttp?_robot:null)||_CFG.robotUrl||'http://127.0.0.1:8766/demo/last'),
+  robotInterval:_sec('robotInterval','robotIntervalSec',2),
+  replyWaitMs:_sec('replyWait','replyWaitSec',4),   // 等机器人自己的回话（reply 字段）最多这么久，到点退回页面话术池
+  arkBase:_txt('arkBase','arkBase',_CFG.arkBase||'https://ark.cn-beijing.volces.com/api/v3'),
+  arkKey:_txt('arkKey','arkKey',_CFG.arkKey||''),           // 空 = 没配密钥，direct 模式到点放离线兜底片
+  arkModel:_txt('arkModel','arkModel',_CFG.arkModel||''),     // 同一把 key 下挂着多个模型，必须锁定展会用的那个
+  arkInterval:_sec('arkInterval','arkIntervalSec',2),
+  arkPageSize:_int('arkPageSize','arkPageSize',5),   // 只看最新 5 条：本轮任务必然是最新那条，拉多了没用
+  autoReadyMs:_sec('autoReady','autoReadySec',0),
+  roundTimeoutMs:_sec('timeout','timeoutSec',360),   // 单轮超时：不外露报错，直接放离线片（契约 §1.4）。实测真片 137~211 秒才出，180 秒会把真结果判死，故默认 360
+  realOnly:_bool('real','realOnly'),                 // 真实模拟：绝不放离线预录片，真片没到就一直等
+  realWaitMaxMs:_sec('realMax','realWaitMaxSec',900),// 真实模拟的死等上限，到点认输回待机（下单进程没起来时不至于挂死）
+  requireTaskId:_bool('taskId','requireTaskId'),     // 只播「机器人本轮单号」命中的那条，防误播别人的片子
   // 离线兜底片：把预录 mp4 放进 assets/fallback/，文件名填这里（或 ?fb=a.mp4,b.mp4 临时覆盖）。
   // 三种情况会放它：上游生成失败、直链过期播不动、现场没外网——观众看到的仍是「说话→出视频」。
   fallbackVideos:(_q.get('fb')?_q.get('fb').split(',').filter(Boolean)
-    :['assets/fallback/fallback-1.mp4','assets/fallback/fallback-2.mp4','assets/fallback/fallback-3.mp4']),
+    :(typeof _SET.fallbackVideos==='string'&&_SET.fallbackVideos)?_SET.fallbackVideos.split(',').map(s=>s.trim()).filter(Boolean)
+    :['assets/fallback/fallback-1.mp4','assets/fallback/fallback-2.mp4','assets/fallback/fallback-3.mp4','assets/fallback/fallback-4.mp4']),
   fakeVideo:_CFG.fakeVideo||'https://www.w3schools.com/html/mov_bbb.mp4'   // 最后一级兜底：要外网，只当压底
 };
 
@@ -514,13 +635,37 @@ let pollTimer=null;     // live 轮询定时器
 let roundTimer=null;    // 单轮超时
 let curRound=null;      // 当前轮次号（live / direct / ws 共用）
 let msgSeen={};         // 每轮已渲染到第几条消息（历史不清屏，靠它防重复渲染）
+// ---- 不许打断正在跑的这一轮 ----
+// 生成要两分半，钱和等待都花在这一轮上；下一位观众此时开口只能先进对话流水，等本轮的片子放完再上台。
+// 只挡「生成中」不够：片子到手后若被 2 秒后的下一次轮询抢台，上一位等于白等，所以连播放这一段一起挡。
+let onAir=false;        // 本轮片子已到手或在放：这段和生成中一样算占用台面（否则刚拿到片就被 2 秒后的轮询抢走）
+let waitTurn=false;     // 排队标记：置位说明本轮跑完后要让给更新的一位，起轮时不重拍任务基线
+let waitRound=null;     // 已记进流水、正在排队的那一轮轮次号（防同一轮被反复轮询重复上屏）
+let waitReplied=false;  // 排队那位的机器人回话是否已上屏
 
 function clearTimers(){demoTimers.forEach(t=>clearTimeout(t));demoTimers=[]}
-function stopHold(){if(holdTimer){clearInterval(holdTimer);holdTimer=null}}
+function stopHold(){if(holdTimer){clearInterval(holdTimer);holdTimer=null}
+  const pv=document.getElementById('viewProgress');if(pv)pv.classList.remove('holding')}
 function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null}}
 function stopRoundTimer(){if(roundTimer){clearTimeout(roundTimer);roundTimer=null}}
 // 起轮后自持超时：拿不到结果就放离线片，大屏绝不卡在 95% 不动
-function startRoundTimer(){stopRoundTimer();roundTimer=setTimeout(onDemoFailed,CONFIG.roundTimeoutMs)}
+// 「真实模拟」开了就不放预录片：到点先接着等（真片实测 137~211 秒），累计到 realWaitMaxMs 才认输回待机
+let roundStartedAt=0;
+function startRoundTimer(){roundStartedAt=Date.now();stopRoundTimer();roundTimer=setTimeout(onRoundTimeout,CONFIG.roundTimeoutMs)}
+function extendRoundWait(){stopRoundTimer();roundTimer=setTimeout(onRoundTimeout,CONFIG.roundTimeoutMs)}
+function onRoundTimeout(){
+  if(!demoRunning)return;
+  if(!CONFIG.realOnly){onDemoFailed();return}
+  // 必须先清掉假进度（含 28 秒那次 enterHold 排程）和话术轮播，否则这句会被话术池 2.6 秒后盖掉，观众以为卡住
+  clearTimers();stopHold();
+  if(Date.now()-roundStartedAt<CONFIG.realWaitMaxMs){
+    setDetail('真片还在路上，继续等待中（真实模拟不放离线片）...');
+    extendRoundWait();return;
+  }
+  demoRunning=false;
+  setDetail('本轮没等到真片，正在返回待机...');
+  demoTimers.push(setTimeout(endRound,2500));
+}
 
 // ---- 假进度：0 → 95% 后保持（SeeDance 不报百分比，绝不自动到 100%）----
 const HOLD_DETAILS=['视频即将完成，正在做最后处理...','正在合成最终画面，请稍候...','AI 正在精修视频细节...','即将为您呈现，正在收尾...'];
@@ -540,20 +685,27 @@ function startFakeProgress(){
   demoTimers.push(setTimeout(enterHold,28000));
 }
 function enterHold(){
-  setStage(2);setPct(95);
-  let i=0;setDetail(HOLD_DETAILS[0]);
+  const FLOOR=95,CEIL=99;      // 保持区间：只许往上涨，到 99% 停住等真结果，绝不自动 100%
+  let i=0,tick=0,p=FLOOR;
   stopHold();
+  setStage(2);setPct(FLOOR);
+  setDetail(HOLD_DETAILS[0]);
+  document.getElementById('viewProgress').classList.add('holding');
   holdTimer=setInterval(()=>{
     i=(i+1)%HOLD_DETAILS.length;
     setDetail(HOLD_DETAILS[i]);
-    setPct(i%2?96:95);        // 95↔96 轻微呼吸：看着在动，但不到 100
+    // 🛑 进度不许倒退：倒退比停住更容易被观众看出是假的（曾做 95↔96 来回呼吸，现场肉眼可见地跳）
+    if((++tick)%4===0&&p<CEIL){p++;setPct(p);}
   },2600);
 }
 
 // ---- 就绪：跳 100% → 完成态(约3s) → 播放 ----
 function onVideoReady(url){
   if(!demoRunning)return;
-  stopHold();stopPoll();stopDirect();stopRoundTimer();clearTimers();
+  demoRunning=false;              // 本轮交付完毕：pollArk / onDemoFailed 自动熄火，pollRobot 继续听下一位观众
+  onAir=true;                     // 但台面仍归本轮：跳 100% → 完成态 → 起播 → 播完，这一段同样不许被抢
+  stopHold();stopRoundTimer();    // 🛑 不停轮询定时器：视频停在画面上不自动关，唯一出口是「收到新一轮对话」
+  clearTimers();                  // 必须清掉假进度剩下的爬升定时器，否则它们会把画面从视频拽回进度页
   setStage(3);setPct(100);setDetail('视频生成完成！');
   demoTimers.push(setTimeout(()=>{view('complete');addMsg('bot',pickLine('done',lastUserText))},800));
   demoTimers.push(setTimeout(()=>playVideo(url||CONFIG.fakeVideo),3800));
@@ -561,6 +713,7 @@ function onVideoReady(url){
 // ---- 兜底片：候选里轮流取（两位观众不该看到同一条），坏掉的记住不再试 ----
 let fbBad={}, fbCursor=0;
 function fbAll(){
+  if(CONFIG.realOnly)return[];   // 真实模拟：预录片一条都不给，宁可不播也不拿旧片冒充本轮结果
   const list=CONFIG.fallbackVideos.filter(u=>u&&!fbBad[u]);
   return (CONFIG.fakeVideo&&!fbBad[CONFIG.fakeVideo])?list.concat([CONFIG.fakeVideo]):list;
 }
@@ -570,17 +723,38 @@ function pickFallback(){
   return pool[fbCursor++%pool.length];
 }
 function playVideo(url,isFb){
-  view('video');
+  view('video');onAir=true;
   const v=document.getElementById('vid');
   v.onerror=()=>{
+    onAir=false;   // 播不动就交出台面，否则排队等上台的那位永远等不到
     if(isFb)fbBad[url]=1;
     const nxt=pickFallback();
     if(nxt&&nxt!==url){console.warn('[video] '+(isFb?'兜底片':'上游地址')+'播不动，换下一条：',url);playVideo(nxt,true);}
     else{console.warn('[video] 已无可用兜底片，返回待机');setTimeout(endRound,2500);}
   };
-  v.onended=()=>setTimeout(endRound,3000);
-  v.src=url;v.play().catch(()=>{});
+  v.onended=()=>{onAir=false};   // 播完停在最后一帧，不回待机、不关窗——排队的下一位在这之后才上台
+  v.muted=false;      // 展会要声音：先按「有声」播，被浏览器拦下才退回静音（见 unlockAudio）
+  setNote(NOTE_DEFAULT);
+  v.src=url;
+  const go=v.play();
+  if(go&&go.catch)go.catch(e=>{
+    console.warn('[video] 有声自动播放被浏览器拦下（'+(e&&e.name)+'），改静音保住画面，点一下屏幕即恢复声音');
+    v.muted=true;setNote(NOTE_NOAUDIO);
+    const r=v.play();if(r&&r.catch)r.catch(()=>{});
+  });
 }
+// 浏览器只认「本页面上的手势」：操作台在另一个标签页，大屏这页没人点过就会拦掉有声播放。
+// 现场要么开局在大屏上点一下，要么用 --autoplay-policy=no-user-gesture-required 启动浏览器。
+const NOTE_DEFAULT='播放结束后自动返回待机', NOTE_NOAUDIO='画面已播放 · 点击屏幕开启声音';
+function setNote(t){const n=document.getElementById('videoNote');if(n)n.textContent=t}
+function unlockAudio(){
+  const v=document.getElementById('vid');
+  if(!v||!v.muted)return;
+  v.muted=false;setNote(NOTE_DEFAULT);
+  if(v.paused&&v.currentSrc){const p=v.play();if(p&&p.catch)p.catch(()=>{v.muted=true;setNote(NOTE_NOAUDIO)})}
+}
+window.addEventListener('pointerdown',unlockAudio);
+window.addEventListener('keydown',unlockAudio);
 function onDemoFailed(){
   if(!demoRunning)return;
   demoRunning=false;                    // failed / 超时会反复读到，本轮只处理一次
@@ -596,9 +770,9 @@ function onDemoFailed(){
 }
 // 一轮收尾：回待机 + 重新监听下一位访客（漏了恢复轮询 = 第一轮之后彻底收不到新请求）
 function endRound(){
-  view('standby');demoRunning=false;
+  view('standby');demoRunning=false;onAir=false;
   if(CONFIG.mode==='live')resumePolling();
-  if(CONFIG.mode==='direct')startDirect();
+  if(CONFIG.mode==='direct')startDirect();   // 台面已空：排着队的那位在这一拍的 pollRobot 里上台
 }
 
 // ---- local 模式：一轮完整模拟（控制面板 / 历史 / 自动演示触发）----
@@ -651,7 +825,8 @@ function renderMsgs(round,list){
 // ---- direct 模式（现场主用）：页面双轮询，无中转 ----
 // ① 问机器人小 JSON：{round,text,time} —— round 变了就是来了一位新观众
 // ② 问 SeeDance 任务列表 —— 只播「本轮新出现且已跑完」的那条
-let robotTimer=null,arkTimer=null,baseIds=new Set(),playedIds=new Set();
+let robotTimer=null,arkTimer=null,baseIds=new Set(),playedIds=new Set(),baseOk=true,curTaskId='';
+let armed=false;      // 冷启动第一拍是否已把「旧轮次」认成已知（见 pollRobot 里的闸门）
 function startDirect(){
   stopDirect();
   robotTimer=setInterval(pollRobot,CONFIG.robotInterval);
@@ -675,14 +850,61 @@ async function pollRobot(){
     if(!res.ok)throw new Error('HTTP '+res.status);
     const st=await res.json();
     setRobotOnline(true);
+    if(!armed){
+      // 冷启动第一拍：监听程序里那条是「上一位几分钟前说的」旧记录，认成已知轮次就收工。
+      // 不认的话每刷新一次大屏就替一位早走掉的观众重新跑一遍生成 —— 现场表现为「我还没开口它就开始转圈」。
+      armed=true;
+      if(st&&st.round!=null&&st.round>0)curRound=st.round;
+      return;
+    }
     if(st&&st.round!=null&&st.round>0&&st.round!==curRound){
-      curRound=st.round;demoRunning=true;stopHold();clearTimers();
-      addMsg('user',st.text,st.time);
-      addMsg('bot',pickLine('reply',st.text));
-      startFakeProgress();startRoundTimer();
-      arkBaseline();     // 起轮第一件事：把「此刻已跑完的任务」记成排除名单
+      // 新观众先记进对话流水。同一轮会被反复轮询读到，靠 waitRound 只记一次
+      if(st.round!==waitRound){
+        waitRound=st.round;waitReplied=false;
+        addMsg('user',st.text,st.time);
+        awaitReply=false;typing(false);
+      }
+      if(demoRunning||onAir){
+        waitTurn=true;                        // 上一位还在生成、或片子正在放：这位只排队，台面一律不动
+        if(!waitReplied){
+          if(st.reply){waitReplied=true;botReply(st.reply)}
+          else if(!awaitReply)botReply('');   // 回话没到也亮「正在输入」，到点补一句，别让排队的人对着静音
+        }
+        return;
+      }
+      // 排队期间那句回话可能已经上屏了，上台时不能再补一遍（重复气泡）
+      const adopted=waitTurn,replyShown=waitReplied;
+      waitTurn=false;waitRound=null;waitReplied=false;
+      beginRound(st,adopted);
+      awaitReply=false;typing(false);
+      if(!replyShown)botReply(st.reply);       // 机器人自己给的回话优先；没给就等它一拍
+    }else if(st&&awaitReply&&st.round===curRound&&st.reply){
+      botReply(st.reply);                  // 回话比 ASR 晚到是真机常态：先听见、再想、才开口
     }
   }catch(e){setRobotOnline(false);}
+}
+// 起一轮：占台面 + 开进度皮 + 起本轮超时。
+// adopted=true 是排队等上来的那位：基线沿用上一轮起轮时拍的那份，重拍会把这一轮已经跑完的片子当「旧片」排除掉，
+// 结果就是排到队却永远等不到自己的片（排队等待期间上游可能已经出片了）。
+function beginRound(st,adopted){
+  curRound=st.round;demoRunning=true;stopHold();clearTimers();
+  curTaskId=String(st.taskId||'').trim();   // 本轮那一单的单号：「只认本轮单号」开关要用它
+  startFakeProgress();startRoundTimer();
+  if(adopted)console.info('[round] 排队轮次上台 round=',curRound,'沿用上一轮基线');
+  else arkBaseline();     // 起轮第一件事：把「此刻已跑完的任务」记成排除名单
+}
+// 机器人的回话文本（契约 v3.1 的 reply 字段）：给了就一字不改地上屏，不再用页面自带话术池。
+// 没给就亮「正在输入」等一拍，到点仍没有才退回话术池 —— 真机发不出这条也不会冷场。
+let awaitReply=false;
+function botReply(given){
+  if(given){typing(false);awaitReply=false;addMsg('bot',given);return}
+  if(awaitReply)return;
+  awaitReply=true;typing(true);
+  demoTimers.push(setTimeout(()=>{
+    if(!awaitReply)return;
+    awaitReply=false;typing(false);
+    addMsg('bot',pickLine('reply',lastUserText));
+  },CONFIG.replyWaitMs));
 }
 // 防重播：11:02 出的片子若不排除，11:03 第二位观众一起来就会被当成结果再放一遍。
 // 基线收「此刻已尘埃落定」的任务（成功或失败/取消）——它们不可能是本轮结果；
@@ -690,19 +912,27 @@ async function pollRobot(){
 const ARK_DONE=['succeeded','failed','cancelled'];
 async function arkBaseline(){
   if(!CONFIG.arkKey)return;
-  try{baseIds=new Set((await arkList()).filter(t=>ARK_DONE.includes(t.status)).map(t=>t.id));setArkOnline(true);}
-  catch(e){baseIds=new Set();setArkOnline(false);}
+  try{baseIds=new Set((await arkList()).filter(t=>ARK_DONE.includes(t.status)).map(t=>t.id));baseOk=true;setArkOnline(true);}
+  // 基线没拍到就分不清新旧：本轮禁止播任何片子，宁可到点放离线兜底，也不要把别人的旧片当成本轮结果
+  catch(e){baseIds=new Set();baseOk=false;setArkOnline(false);}
 }
 async function pollArk(){
   if(!CONFIG.arkKey||!demoRunning)return;
+  if(!baseOk){arkBaseline();return;}   // 上一轮基线失败：先补拍基线，这一拍不做任何判定
+  if(CONFIG.requireTaskId&&!curTaskId){
+    // 机器人这轮没带单号 = 没人给它下过单：宁可等到超时，也不去列表里猜一条别人的片子
+    setDetail('等待本轮下单单号...');return;
+  }
   let items;
   try{items=await arkList();setArkOnline(true);}
   catch(e){setArkOnline(false);return;}
-  for(const t of items){
+  for(const t of items){                        // 列表按创建时间倒序 → 第一条命中的就是最新那条
+    if(CONFIG.requireTaskId&&t.id!==curTaskId)continue;   // 只认本轮那一单，别人的任务先跑完也与我无关
     if(CONFIG.arkModel&&t.model&&t.model!==CONFIG.arkModel)continue;   // 多模型共用一把 key，必须过滤
     if(!t.id||baseIds.has(t.id)||playedIds.has(t.id))continue;
     if(t.status==='succeeded'){
       playedIds.add(t.id);
+      console.info('[ark] 本轮命中',t.id,t.model,t.status);   // 现场排查用：播的是哪一条，一眼可查
       onVideoReady(t.content&&t.content.video_url);
       return;
     }
@@ -755,18 +985,18 @@ function handleWsMsg(m){
 
 // ===== 控制面板：阶段跳转（本地调试用）=====
 function jumpTo(s){
-  stopHold();stopPoll();stopDirect();stopRoundTimer();clearTimers();demoRunning=true;
+  stopHold();stopPoll();stopDirect();stopRoundTimer();clearTimers();demoRunning=true;onAir=false;   // 手动跳台 = 操作员接管，占用标记一并作废
   if(s==='standby'){view('standby');demoRunning=false;return}
   if(s==='queue'){view('progress');setStage(0);setPct(5);setDetail('排队等待中...');return}
   if(s==='gen'){view('progress');setStage(1);setPct(40);setDetail('AI 正在生成视频帧...');return}
   if(s==='render'){view('progress');enterHold();return}   // 渲染中 = 95% 保持循环
   if(s==='complete'){onVideoReady(CONFIG.fakeVideo);return}
-  if(s==='video'){view('video');const v=document.getElementById('vid');v.src=CONFIG.fakeVideo;v.play().catch(()=>{});
-    v.onended=()=>setTimeout(endRound,3000);return}
+  if(s==='video'){playVideo(CONFIG.fakeVideo);return}
 }
 function resetAll(){
   clearTimers();stopHold();stopPoll();stopDirect();stopRoundTimer();
   demoRunning=false;curRound=null;msgSeen={};
+  onAir=false;waitTurn=false;waitRound=null;waitReplied=false;armed=false;   // armed 归零 = 重新认一次旧轮次，别把清空前那句当新指令
   chatEl.innerHTML='';view('standby');   // 只有控制面板这里会清历史，正常轮次切换保留
   if(CONFIG.mode==='live')startPolling();
   if(CONFIG.mode==='direct')startDirect();
@@ -836,14 +1066,87 @@ setRobotOnline(CONFIG.mode==='direct'?false:true);
 function checkNetwork(){if(CONFIG.mode==='local')setSysOnline(navigator.onLine);}
 window.addEventListener('online',checkNetwork);window.addEventListener('offline',checkNetwork);
 
-// ===== 启动：按模式接上对应链路 =====
-(function initMode(){
+// ===== 现场参数面板：把要改的参数全收在这里，应用后立刻生效并存本机（下次开机自动带回） =====
+const SET_STORE='linkai.v2.settings';
+function _sv(id){const el=document.getElementById(id);return el?el.value.trim():''}
+function _sn(id,def){const n=parseFloat(_sv(id));return isFinite(n)&&n>0?n:def}
+function renderSettings(){
+  const g=id=>document.getElementById(id);
+  g('setMode').value=CONFIG.mode;
+  g('setRealOnly').checked=!!CONFIG.realOnly;
+  g('setRequireTaskId').checked=!!CONFIG.requireTaskId;
+  g('setTimeoutSec').value=Math.round(CONFIG.roundTimeoutMs/1000);
+  g('setRealMax').value=Math.round(CONFIG.realWaitMaxMs/1000);
+  g('setRobotUrl').value=CONFIG.robotUrl;
+  g('setRobotInterval').value=CONFIG.robotInterval/1000;
+  g('setReplyWait').value=CONFIG.replyWaitMs/1000;
+  g('setArkBase').value=CONFIG.arkBase;
+  g('setArkModel').value=CONFIG.arkModel;
+  g('setArkKey').value='';
+  g('setArkKey').placeholder=CONFIG.arkKey?('已配置 ••••'+CONFIG.arkKey.slice(-4)+' · 留空则不改'):'未配置（direct 只能放离线片）';
+  g('setArkInterval').value=CONFIG.arkInterval/1000;
+  g('setArkPageSize').value=CONFIG.arkPageSize;
+  g('setFallbacks').value=CONFIG.fallbackVideos.join(', ');
+}
+function setHint(t,ok){const el=document.getElementById('setHint');el.textContent=t;el.className='ctrl-hint'+(ok?' ctrl-on':'')}
+function applySettings(auto){
+  const g=id=>document.getElementById(id);
+  // 只有「链路参数」变了才重接轮询；开关/超时这类是决策点现读的值，重接会把观众当前这轮打断
+  const link=()=>[CONFIG.mode,CONFIG.robotUrl,CONFIG.arkBase,CONFIG.robotInterval,CONFIG.arkInterval].join('|');
+  const linkBefore=link();
+  Object.assign(CONFIG,{
+    mode:g('setMode').value,
+    realOnly:g('setRealOnly').checked,
+    requireTaskId:g('setRequireTaskId').checked,
+    roundTimeoutMs:Math.round(_sn('setTimeoutSec',360)*1000),
+    realWaitMaxMs:Math.round(_sn('setRealMax',900)*1000),
+    robotInterval:Math.round(_sn('setRobotInterval',2)*1000),
+    replyWaitMs:Math.round(_sn('setReplyWait',4)*1000),
+    arkInterval:Math.round(_sn('setArkInterval',2)*1000),
+    arkPageSize:Math.round(_sn('setArkPageSize',5))
+  });
+  // 空框 = 不覆盖（尤其密钥：ark-config.js 那把继续用），有字才认面板的
+  if(_sv('setRobotUrl'))CONFIG.robotUrl=_sv('setRobotUrl');
+  if(_sv('setArkBase'))CONFIG.arkBase=_sv('setArkBase');
+  if(_sv('setArkModel'))CONFIG.arkModel=_sv('setArkModel');
+  if(_sv('setArkKey'))CONFIG.arkKey=_sv('setArkKey');
+  if(_sv('setFallbacks'))CONFIG.fallbackVideos=_sv('setFallbacks').split(',').map(s=>s.trim()).filter(Boolean);
+  const saved={mode:CONFIG.mode,realOnly:CONFIG.realOnly,requireTaskId:CONFIG.requireTaskId,
+    timeoutSec:CONFIG.roundTimeoutMs/1000,realWaitMaxSec:CONFIG.realWaitMaxMs/1000,
+    robotUrl:CONFIG.robotUrl,robotIntervalSec:CONFIG.robotInterval/1000,replyWaitSec:CONFIG.replyWaitMs/1000,
+    arkBase:CONFIG.arkBase,arkModel:CONFIG.arkModel,arkIntervalSec:CONFIG.arkInterval/1000,
+    arkPageSize:CONFIG.arkPageSize,fallbackVideos:CONFIG.fallbackVideos.join(', ')};
+  if(_sv('setArkKey'))saved.arkKey=CONFIG.arkKey;   // 面板里手填的密钥只进本机浏览器，不写文件、不进 Git
+  try{localStorage.setItem(SET_STORE,JSON.stringify(saved));
+    setHint((auto?'已生效并记住 ✓':'已应用并存本机 ✓')+(CONFIG.realOnly?'（真实模拟：不放离线片，死等真片）':'')+
+      (CONFIG.requireTaskId?'（只认本轮单号：需监听程序带回 taskId）':''),true);
+  }catch(e){setHint('已生效，但本机存储失败（'+e.name+'）：刷新后会回到原参数')}
+  if(!auto||link()!==linkBefore)bootMode();   // 端点/间隔/模式换了才重接链路
+  renderSettings();
+}
+function resetSettings(){
+  localStorage.removeItem(SET_STORE);
+  setHint('本机设置已清除，刷新页面即回到 ark-config.js 与内置默认');
+}
+
+// ===== 启动：按模式接上对应链路（面板「应用」后会重跑一次） =====
+function bootMode(){
   const tag=document.getElementById('modeTag');
+  stopDirect();stopPoll();clearTimeout(wsReconnectTimer);
+  if(ws){try{ws.onclose=null;ws.close()}catch(e){}ws=null}
   if(CONFIG.mode==='direct'){tag.textContent='直连轮询';setSysOnline(true);setRobotOnline(false);startDirect();}
   else if(CONFIG.mode==='ws'){tag.textContent='机器人WS';startWs();}
   else if(CONFIG.mode==='live'){tag.textContent='轮询后端';startPolling();}
   else{tag.textContent='本地模拟';checkNetwork();}
-})();
+  if(CONFIG.requireTaskId&&CONFIG.mode==='direct'&&!CONFIG.arkKey)setHint('注意：没配密钥，「只认单号」永远等不到片');
+}
+// 面板改一项就即时生效并记住 —— 原来必须点「应用」，现场有人开了开关没点，大屏照旧放离线片
+['setRealOnly','setRequireTaskId','setMode','setTimeoutSec','setRealMax','setRobotUrl','setRobotInterval',
+ 'setReplyWait','setArkBase','setArkModel','setArkKey','setArkInterval','setArkPageSize','setFallbacks']
+  .forEach(id=>{const el=document.getElementById(id);
+    if(el)el.addEventListener('change',()=>applySettings(true))});
+renderSettings();
+bootMode();
 </script>
 </body>
 </html>
