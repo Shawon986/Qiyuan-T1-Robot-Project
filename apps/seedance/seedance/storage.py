@@ -83,8 +83,9 @@ class TosUploader:
             region_name=self.cfg.tos_region,
             config=BotoConfig(
                 signature_version="s3v4",
-                # TOS S3-compatible endpoints (tos-s3-*.bytepluses.com) expect path-style
-                s3={"addressing_style": "path"},
+                # Live-verified 2026-10-10: this bucket requires VIRTUAL-hosted style;
+                # path-style PUTs fail with InvalidPathAccess.
+                s3={"addressing_style": "virtual"},
             ),
         )
 
