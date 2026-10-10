@@ -322,6 +322,19 @@
 3. All software features now confirmed working by the user: video demo (Seedance 15s on the v2 page)
    and Cantonese conversation (AIChain + BytePlus).
 
+## 2026-10-10 — Phase 28: Official portal SDK video review (interface manual deep-dive)
+
+1. User placed the official sdk_t1-v1.0.0.0 (extracted) in the repo; reviewed 接口说明.md for video facts:
+   - **Screen playback answered**: `PlayEmotion` service supports `type:"file"` + `file_paths[]` +
+     priority/loop_count — arbitrary video files can play on the robot screen (no PrimeBot question needed).
+   - **Recording**: RTSP `rtsp://<IP>:2554/live_head_stereo_left` (port 2554; camera ids head_stereo_left/
+     head_stereo_right). CaptureJpegImage is 1 fps only. **Biped mode: left camera RTSP is upside-down** —
+     app must rotate 180° after checking mode via GetMcAction (SDK's own get_video_stream example does not).
+   - Mic: TCP 4713 (PulseAudio, 8ch 48kHz). Preset motions: CSV in /robot/userdata/sd/custom_motions/.
+2. Proposed changes awaiting user approval: (a) RTSP recording module + biped flip, (b) robot-screen
+   playback module via PlayEmotion(file), (c) RTSP port 2554 in the network checklist, (d) trim the
+   PrimeBot ticket (screen question now answered by the SDK).
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
