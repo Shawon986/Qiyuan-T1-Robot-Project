@@ -16,7 +16,8 @@ from pathlib import Path
 
 from flask import Flask, send_from_directory
 
-from .controller import DemoController, latest
+from . import controller as controller_mod
+from .controller import DemoController
 from .protocol import RoundManager, pong_msg, system_msg
 
 
@@ -81,17 +82,17 @@ def health():
 @app.route("/demo/last")
 def demo_last():
     """The robot's small JSON for the page's direct mode: {round, text, time, taskId}."""
-    return latest.get()
+    return controller_mod.latest.get()
 
 
-def _run_last_json_server(port: int) -> None:
-    """Tiny HTTP server on a second port (default 8766) for the page's robotUrl poll."""
-    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+def _last_json_handler_cls():
+    """Handler for the /demo/last JSON the page polls (direct mode)."""
+    from http.server import BaseHTTPRequestHandler
     import json as _json
 
-    class Handler(BaseHTTPRequestHandler):
+    class LastJsonHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            body = _json.dumps(controller.latest.get(), ensure_ascii=False).encode("utf-8")
+            body = _json.dumps(controller_mod.latest.get(), ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -102,7 +103,18 @@ def _run_last_json_server(port: int) -> None:
         def log_message(self, *args):
             pass
 
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    return LastJsonHandler
+
+
+def _run_last_json_server(port: int) -> None:
+    """Tiny HTTP server on a second port (default 8766) for the page's robotUrl poll."""
+    from http.server import ThreadingHTTPServer
+
+    server = ThreadingHTTPServer(("0.0.0.0", port), _last_json_handler_cls())
+    try:
+        server.serve_forever()
+    finally:
+        server.server_close()
 
 
 @app.route("/")
