@@ -47,7 +47,7 @@ class TestRoundManager(unittest.TestCase):
         self.rm = RoundManager(self.hub.broadcast, timeout_s=90)
 
     def test_new_round_emits_user_then_fixed_bot(self):
-        r = self.rm.new_round("做个视频")
+        r = self.rm.new_round("做个视频", bot_reply=FIXED_BOT_TEXT)
         self.assertEqual(r, 1)
         self.assertEqual(self.hub.sent[0]["type"], "chat")
         self.assertEqual(self.hub.sent[0]["role"], "user")
@@ -55,6 +55,23 @@ class TestRoundManager(unittest.TestCase):
         self.assertEqual(self.hub.sent[1]["text"], FIXED_BOT_TEXT)
         self.assertEqual(self.hub.sent[0]["round"], 1)
         self.assertEqual(self.hub.sent[1]["round"], 1)
+
+    def test_new_round_without_bot_reply(self):
+        self.rm.new_round("chat question")
+        self.assertEqual(len(self.hub.sent), 1)  # chat(user) only
+        self.assertEqual(self.hub.sent[0]["role"], "user")
+
+    def test_broadcast_chat(self):
+        r = self.rm.new_round("hello")
+        self.rm.broadcast_chat(r, "bot", "hi there")
+        self.assertEqual(self.hub.sent[-1]["role"], "bot")
+        self.assertEqual(self.hub.sent[-1]["text"], "hi there")
+
+    def test_broadcast_chat_stale_round_dropped(self):
+        r1 = self.rm.new_round("first")
+        self.rm.new_round("second")
+        self.rm.broadcast_chat(r1, "bot", "stale reply")
+        self.assertEqual(len(self.hub.sent), 2)  # only the two user lines
 
     def test_round_increments(self):
         self.rm.new_round("a")

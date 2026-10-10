@@ -16,7 +16,7 @@ from pathlib import Path
 
 from flask import Flask, send_from_directory
 
-from .controller import DemoController
+from .controller import DemoController, latest
 from .protocol import RoundManager, pong_msg, system_msg
 
 
@@ -78,6 +78,33 @@ def health():
     return {"ok": True, "service": "exhibition-robot-ws", "round": rounds.round}
 
 
+@app.route("/demo/last")
+def demo_last():
+    """The robot's small JSON for the page's direct mode: {round, text, time, taskId}."""
+    return latest.get()
+
+
+def _run_last_json_server(port: int) -> None:
+    """Tiny HTTP server on a second port (default 8766) for the page's robotUrl poll."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import json as _json
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = _json.dumps(controller.latest.get(), ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+
+
 @app.route("/")
 def index():
     """Landing goes straight to the confirmed demo page (v2 aurora flow)."""
@@ -136,9 +163,13 @@ def main() -> int:
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--pages", default=None, help="directory with the exhibition HTML pages")
+    ap.add_argument("--last-port", type=int, default=int(os.environ.get("DEMO_LAST_PORT", "8766")),
+                    help="port for the /demo/last JSON the page polls (direct mode)")
     args = ap.parse_args()
     PAGES_DIR = args.pages or os.environ.get("PAGE_DIR")
-    print(f"exhibition WS server on ws://{args.host}:{args.port}  pages_dir={PAGES_DIR or 'off'}")
+    threading.Thread(target=_run_last_json_server, args=(args.last_port,), daemon=True).start()
+    print(f"exhibition WS server on ws://{args.host}:{args.port}  "
+          f"/demo/last on :{args.last_port}  pages_dir={PAGES_DIR or 'off'}")
     app.run(host=args.host, port=args.port, threaded=True)
     return 0
 

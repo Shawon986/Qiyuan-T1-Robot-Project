@@ -56,14 +56,23 @@ class RoundManager:
         self._timer: threading.Timer | None = None
         self._terminal_rounds: set[int] = set()
 
-    def new_round(self, user_text: str) -> int:
+    def new_round(self, user_text: str, bot_reply: str | None = None) -> int:
+        """Start a round. Emits chat(user); emits chat(bot) only if bot_reply is given."""
         with self._lock:
             self.round += 1
             r = self.round
             self._arm_watchdog(r)
         self._broadcast(chat_msg(r, "user", user_text))
-        self._broadcast(chat_msg(r, "bot", FIXED_BOT_TEXT))
+        if bot_reply:
+            self._broadcast(chat_msg(r, "bot", bot_reply))
         return r
+
+    def broadcast_chat(self, round_no: int, role: str, text: str) -> None:
+        """Public helper: emit an extra chat line for an active round."""
+        with self._lock:
+            if round_no != self.round:
+                return  # never leak a chat line into a newer round
+        self._broadcast(chat_msg(round_no, role, text))
 
     def _arm_watchdog(self, r: int) -> None:
         if self._timer is not None:
