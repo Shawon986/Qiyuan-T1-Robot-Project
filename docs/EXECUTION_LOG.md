@@ -375,6 +375,12 @@
    voiceId from the technical team / console voice list; BytePlus remains the verified audio leg.
 4. Tests: conversation 26, demo_ui 17, seedance 16 — all green.
 
+## 2026-10-10 — Phase 31.1: Seedance model switched to 2.0-fast per developer
+
+Developer instruction: model `dreamina-seedance-2-0-fast-260128`, duration 15 s. `.env`
+`SEEDANCE_MODEL_ID` updated (code default already matched). Live-verified: 15s/16:9 submission
+accepted — taskId `cgt-20261010160532-hz77g`. Seedance tests 16/16 green.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
