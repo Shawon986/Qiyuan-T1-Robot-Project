@@ -25,6 +25,10 @@ CID_END = "event.cid_end"
 SESSION_CREATED = "session.created"
 SESSION_CONFIGED = "session.configed"
 
+# The server rejects audio items larger than 25600 bytes; 16000 bytes = 0.5 s
+# of 16 kHz / 16-bit mono PCM, a safe streaming chunk size.
+AUDIO_CHUNK_MAX = 16000
+
 
 class AichainError(RuntimeError):
     pass
@@ -58,7 +62,10 @@ def build_session_config(cfg: ConversationConfig, sid: str) -> dict:
         "tts": {
             "enable": True,
             "voices": {
-                "zh": {
+                # voices are keyed by language: "zh" = Mandarin, "zh-HK" = Cantonese.
+                # (Until 2026-10-10 we sent "zh" only, so the robot spoke Mandarin
+                #  even for Cantonese text — the zh-HK key selects the Cantonese voice.)
+                cfg.aichain_tts_voice_key: {
                     "voiceId": cfg.aichain_tts_voice_id,
                     "audioConfig": {
                         "audioEncoding": "raw",
@@ -94,15 +101,16 @@ class AichainClient:
         if not (self.cfg.aichain_app_id and self.cfg.aichain_app_key):
             raise AichainError("AICHAIN_APP_ID / AICHAIN_APP_KEY not configured")
 
-    def _open_session(self) -> tuple:
-        url = build_ws_url(self.cfg.aichain_app_id, self.cfg.aichain_app_key,
-                           self.cfg.aichain_sn, self.cfg.aichain_base)
+    def _open_session(self, cfg: ConversationConfig | None = None) -> tuple:
+        cfg = cfg or self.cfg
+        url = build_ws_url(cfg.aichain_app_id, cfg.aichain_app_key,
+                           cfg.aichain_sn, cfg.aichain_base)
         ws = websocket.create_connection(url, timeout=60)
         created = json.loads(ws.recv())
         if created.get("type") != SESSION_CREATED:
             raise AichainError(f"expected session.created, got: {created}")
         sid = created["sid"]
-        ws.send(json.dumps(build_session_config(self.cfg, sid)))
+        ws.send(json.dumps(build_session_config(cfg, sid)))
         configured = json.loads(ws.recv())
         if configured.get("type") not in (SESSION_CONFIGED,):
             if configured.get("type") == "session.error":
@@ -163,7 +171,11 @@ class AichainClient:
         return turn
 
     def send_audio_file(self, audio_path: str | Path) -> AichainTurn:
-        """One audio turn (STT via engine config; then NLU/TTS per app config)."""
+        """One audio turn (STT via engine config; then NLU/TTS per app config).
+
+        The audio is streamed in <= 16000-byte chunks (server limit: 25600 bytes
+        per audio item), each chunk as its own append frame, endFlag on the last.
+        """
         data = Path(audio_path).read_bytes()
         if data[:4] == b"RIFF":
             data = data[44:]  # strip standard WAV header
@@ -173,14 +185,45 @@ class AichainClient:
         cid = f"cid-{int(time.time() * 1000)}"
         turn = AichainTurn()
         try:
-            b64 = base64.b64encode(data).decode()
-            ws.send(json.dumps(build_append(sid, cid, [{"type": "audio", "data": b64}])))
+            chunks = chunk_pcm(data)
+            for i, chunk in enumerate(chunks):
+                b64 = base64.b64encode(chunk).decode()
+                last = i == len(chunks) - 1
+                ws.send(json.dumps(build_append(
+                    sid, cid, [{"type": "audio", "data": b64}], end_flag=last)))
             self._consume(ws, sid, cid, turn)
         finally:
             ws.close()
         if turn.errors:
             raise AichainError("; ".join(turn.errors))
         return turn
+
+    def synthesize(self, text: str) -> bytes:
+        """TTS-only turn: speak arbitrary Cantonese text with the configured voice.
+
+        NLU is disabled for the session, so the tts.audio frames carry the TTS of
+        the input text itself (verified live 2026-10-10). Returns WAV bytes.
+        """
+        import os as _os
+        cfg = ConversationConfig(env={**_os.environ, "AICHAIN_NLU_ENABLED": "0"})
+        ws, sid = self._open_session(cfg)
+        cid = f"cid-{int(time.time() * 1000)}"
+        turn = AichainTurn()
+        try:
+            ws.send(json.dumps(build_append(sid, cid, [{"type": "text", "data": text}])))
+            self._consume(ws, sid, cid, turn)
+        finally:
+            ws.close()
+        if turn.errors:
+            raise AichainError("; ".join(turn.errors))
+        if not turn.audio_wav:
+            raise AichainError("TTS returned no audio")
+        return turn.audio_wav
+
+
+def chunk_pcm(data: bytes, chunk_size: int = AUDIO_CHUNK_MAX) -> list[bytes]:
+    """Split PCM into server-acceptable chunks (<= 25600 bytes per audio item)."""
+    return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 
 def _pcm_to_wav(pcm: bytes, sample_rate: int = 16000, channels: int = 1) -> bytes:

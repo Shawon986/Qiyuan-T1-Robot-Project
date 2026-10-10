@@ -345,6 +345,36 @@
 3. Pending: PrimeBot SSH creds + 3 questions; developer direct-mode integration check; robot days 4–5;
    Oct 19 rehearsal. Full state also saved in Claude memory for session handover.
 
+## 2026-10-10 — Phase 30: Demo server bug fixes on session resume
+
+1. `demo_ui/server.py`: the :8766 `/demo/last` handler referenced `controller.latest`
+   (AttributeError on every direct-mode poll; regression from the final-flow commit). Now resolves
+   the module singleton at request time; added regression test `apps/demo_ui/test/test_server.py`
+   (demo_ui suite now 17 tests).
+2. `run_demo_server.sh` was missing `apps/conversation` in PYTHONPATH — any real WS request would
+   crash on the `classify_intent` import. Path added; script copied into the repo as
+   `scripts/run_demo_server.sh`.
+3. Verified live: 56/56 tests; :8765 pages/health/Flask /demo/last, :8766 /demo/last, WS ping/pong.
+
+## 2026-10-10 — Phase 31: Bilingual conversation finalised (Mandarin or Cantonese in, Cantonese out)
+
+1. **Requirement (user)**: visitors may speak Mandarin OR Cantonese; the robot always replies in
+   Cantonese. Live-verified with BytePlus-synthesised visitor speech: AIChain STT (engine 5, zh-HK)
+   transcribes both languages correctly; the AIChain persona replies in Cantonese; the robot audio
+   is spoken by the BytePlus Cantonese voice (`zh_female_yueyunv_mars_bigtts`) — a 3-turn
+   Mandarin→Cantonese conversation demo was recorded and confirmed by the user.
+2. **Fixes**: ① `send_audio_file` now chunks PCM (server rejects audio items > 25600 bytes — any
+   real speech used to fail); ② the intent classifier now recognises traditional-script 視頻 etc.,
+   so Cantonese video requests trigger the wait phrase; ③ `AichainClient.synthesize()` added
+   (TTS-only turn, NLU off); ④ `engine.speak()` order = BytePlus (primary) → classic iFlytek, with
+   AIChain TTS gated behind `AICHAIN_TTS_ENABLED=1`.
+3. **AIChain TTS voice (open item)**: iFlytek announced Cantonese synthesis live, but every numeric
+   voiceId reachable via the API (4–11, 18–60, 61–94; `zh` and `zh-HK` voice keys; before and after
+   app publish) sounds Mandarin per the user's ears. `build_session_config` now keys voices by
+   `zh-HK` (env `AICHAIN_TTS_VOICE_KEY`) per the official SDK docs. Awaiting the exact Cantonese
+   voiceId from the technical team / console voice list; BytePlus remains the verified audio leg.
+4. Tests: conversation 26, demo_ui 17, seedance 16 — all green.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |

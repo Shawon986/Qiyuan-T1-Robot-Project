@@ -1,7 +1,10 @@
 """Wake-word detection and intent classification (pure, offline-testable)."""
 
 VIDEO_INTENT_KEYWORDS = [
+    # simplified (Mandarin visitors)
     "生成视频", "做个视频", "拍个视频", "制作视频", "视频",
+    # traditional (Cantonese visitors) — 2026-10-10: C2 check showed 視頻 was missed
+    "生成視頻", "做個視頻", "拍個視頻", "製作視頻", "視頻",
     "generate video", "make a video", "create a video",
 ]
 

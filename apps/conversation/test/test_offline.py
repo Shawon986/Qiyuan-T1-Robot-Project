@@ -66,6 +66,12 @@ class TestWakeAndIntent(unittest.TestCase):
         self.assertEqual(classify_intent("停止"), "stop")
         self.assertEqual(classify_intent("今天天气怎么样"), "chat")
 
+    def test_intents_traditional_cantonese(self):
+        # traditional-script visitors (Cantonese) must hit video intent too
+        self.assertEqual(classify_intent("幫我生成一個視頻"), "generate_video")
+        self.assertEqual(classify_intent("拍個視頻俾我睇"), "generate_video")
+        self.assertEqual(classify_intent("製作一條視頻"), "generate_video")
+
 
 class TestMemory(unittest.TestCase):
     def test_window(self):

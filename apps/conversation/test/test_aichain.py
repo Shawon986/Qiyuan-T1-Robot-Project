@@ -9,6 +9,7 @@ from conversation.aichain import (
     build_append,
     build_session_config,
     build_ws_url,
+    chunk_pcm,
     _pcm_to_wav,
 )
 from conversation.config import ConversationConfig
@@ -36,7 +37,7 @@ class TestSessionConfig(unittest.TestCase):
         self.assertEqual(c["mode"], "half_duplex")
         self.assertEqual(c["stt"]["sttEngineId"], "5")
         self.assertEqual(c["stt"]["language"], "zh-HK")  # Cantonese
-        self.assertEqual(c["tts"]["voices"]["zh"]["voiceId"], "4")
+        self.assertEqual(c["tts"]["voices"]["zh-HK"]["voiceId"], "4")  # Cantonese voice key
         self.assertTrue(c["nlu"]["enable"])
 
     def test_nlu_disabled(self):
@@ -63,6 +64,21 @@ class TestWavWrap(unittest.TestCase):
         wav = _pcm_to_wav(b"\x00\x00" * 160)
         self.assertEqual(wav[:4], b"RIFF")
         self.assertEqual(len(wav), 44 + 320)
+
+
+class TestChunkPcm(unittest.TestCase):
+    def test_splits_at_chunk_size(self):
+        data = bytes(16000 * 3 + 123)
+        chunks = chunk_pcm(data)
+        self.assertEqual(len(chunks), 4)
+        self.assertTrue(all(len(c) <= 16000 for c in chunks))
+        self.assertEqual(b"".join(chunks), data)
+
+    def test_small_audio_is_one_chunk(self):
+        data = bytes(8000)
+        chunks = chunk_pcm(data)
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0], data)
 
 
 class TestTurn(unittest.TestCase):

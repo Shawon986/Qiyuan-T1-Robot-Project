@@ -81,7 +81,21 @@ class ConversationEngine:
         return reply
 
     def speak(self, text: str) -> bytes:
-        """Cantonese TTS: prefers BytePlus (VolcTTS, mp3) and falls back to iFlytek (WAV)."""
+        """Cantonese TTS: BytePlus (VolcTTS, verified Cantonese) is primary.
+
+        AIChain TTS is opt-in via AICHAIN_TTS_ENABLED=1 and only after the correct
+        Cantonese voiceId is confirmed — every voiceId probed so far (4-11, both zh
+        and zh-HK voice keys) sounds Mandarin. Classic iFlytek is the last resort.
+        """
+        if self.cfg.aichain_app_id and self.cfg.aichain_app_key and self.cfg.aichain_tts_enabled:
+            try:
+                from .aichain import AichainClient
+                wav = AichainClient(self.cfg).synthesize(text)
+                if wav:
+                    return wav
+            except Exception as exc:  # voice leg must never break the conversation
+                print(f"[conversation] AIChain TTS failed "
+                      f"({type(exc).__name__}: {exc}); falling back", flush=True)
         if self.cfg.volc_tts_api_key:
             from .volc_tts import VolcTTS
             return VolcTTS(self.cfg).synthesize(text)

@@ -49,6 +49,10 @@ class ConversationConfig:
         self.aichain_stt_engine = env.get("AICHAIN_STT_ENGINE", "5")  # engine 5: 60+ langs incl. zh-HK
         self.aichain_stt_language = env.get("AICHAIN_STT_LANGUAGE", "zh-HK")  # Cantonese
         self.aichain_tts_voice_id = env.get("AICHAIN_TTS_VOICE_ID", "4")
+        self.aichain_tts_voice_key = env.get("AICHAIN_TTS_VOICE_KEY", "zh-HK")  # voices key: zh-HK = Cantonese
+        # AIChain TTS is opt-in until the Cantonese voiceId is confirmed: all voiceIds
+        # probed so far (4-11, zh and zh-HK keys) sound Mandarin. BytePlus stays primary.
+        self.aichain_tts_enabled = env.get("AICHAIN_TTS_ENABLED", "0") == "1"
         self.aichain_nlu_enabled = env.get("AICHAIN_NLU_ENABLED", "1") == "1"
         # BytePlus TTS (Cantonese voice leg)
         self.volc_tts_api_key = env.get("VOLC_TTS_API_KEY", "")

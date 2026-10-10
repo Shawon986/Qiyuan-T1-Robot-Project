@@ -82,15 +82,30 @@ Portal account is already created (robot IP `10.1.1.100` registered).
    - PrimeBOT APP customer service / any official WeChat group
 2. In the same ticket ask:
    - Which SDK matches your robot's firmware: portal **v1.0.0.0** or repo **v0.9.4.7**?
-   - **Gimbal control resource/action IDs** (MC upper-body command) for follow-and-film
-   - List of available **preset motion IDs** (for dancing)
+     (The two also ship different `McPresetMotion` enums, so the firmware decides which
+     preset list is live.)
+   - **Gimbal control** (for follow-and-film) — two items the docs do not cover:
+     - `BIPED_GIMBAL` mode (303): what is the trajectory input interface, and what is
+       the trajectory resource file format (an example file would be appreciated)?
+     - `/aima/mc/custom/joint/command` under `BIPED_CUSTOM_UPPER`: the docs say it
+       accepts exactly 6 upper-body joints — please provide the official list of those
+       6 joint names, and confirm whether a neck/head joint is included or reachable.
    - Confirm the camera topic `/aima/hal/camera/head_stereo_left_orin` and audio
-     topic `/aima/hal/audio/capture` are enabled in Develop+Basic mode
-   - **Screen playback** (for rendering generated videos on the robot display): which SDK
-     interface plays a video file on the robot's screen (service/topic, formats, resolution)?
-     Does the brain board have direct internet access for downloading result URLs?
+     topic `/aima/hal/audio/capture` are enabled in Develop+Basic mode.
+   - Does the brain board have direct internet access for calling our cloud services
+     (AIChain ASR/NLU, BytePlus TTS, Seedance submission)? If not, what network
+     route / proxy is supported?
 
-**Deliverables:** SSH credentials + answers to the four questions
+**Already answered by the SDK docs (do NOT re-ask):**
+- **Preset motions** — `SetMcPresetMotion` (`/aimdk_5Fmsgs/srv/`, v1.0 Stable) with the
+  full T1 `McPresetMotion` enum (100 / 1001–1016 / 2001–2044 / 3038–3065), the `area`
+  control mask (incl. `HEAD=4`), and custom `.csv` playback via `ani_path` (120 fps,
+  10 official joint columns, example in 接口说明.md §2.1.1.2; files from the APP's
+  teach-by-hand → `/robot/userdata/sd/custom_motions/`).
+- **Screen playback** — `PlayEmotion` with `type:"file"` + `file_paths[]` plays
+  arbitrary video files on the robot display.
+
+**Deliverables:** SSH credentials + answers to the remaining questions above
 
 ---
 
@@ -115,6 +130,6 @@ Never paste secrets in chat. Instead:
 | 2 | DashScope API key (Qwen) | https://bailian.console.aliyun.com | ☐ |
 | 3 | Volcano TOS AK/SK + bucket | https://console.volcengine.com/tos/ | ☐ |
 | 4 | SeeDance API spec | your backend team | ☐ |
-| 5 | PrimeBot SSH + 4 answers | https://dev.primebot.com/community?board=qa | ☐ |
+| 5 | PrimeBot SSH + firmware↔SDK + gimbal + topics + internet access | https://dev.primebot.com/community?board=qa | ☐ |
 | 6 | PrimeBot portal account | https://dev.primebot.com | ✅ |
 | 7 | AtomGit account (cloning skills) | https://atomgit.com | ☐ optional |

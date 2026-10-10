@@ -46,18 +46,21 @@ works list `<video src=w.videoUrl>` at line ~1128). Required additions:
 5. **(Optional) Feedback**: POST `video_start/video_status/video_result` to `/api/events`
    so the robot can TTS-announce completion.
 
-## Language requirement (locked 2026-10-10)
+## Language requirement (locked 2026-10-10, updated 2026-10-10)
 
-**The visitor and the robot speak CANTONESE (粤语) throughout the demo.**
+**The visitor may speak Mandarin OR Cantonese; the robot always replies in CANTONESE (粤语).**
+Live-verified 2026-10-10: AIChain ASR (engine 5, language zh-HK) transcribes both Mandarin and
+Cantonese correctly, and the AIChain persona answers in Cantonese either way.
 Robot side confirmed Cantonese: wait phrase 請稍等我馬上幫你生成視頻, AIChain persona replies
-(Cantonese), ASR zh-HK, BytePlus TTS voice zh_female_yueyunv_mars_bigtts.
+(Cantonese), TTS = AIChain voiceId 4 (iFlytek, confirmed Cantonese-sounding 2026-10-10; engine.speak
+uses it first), fallback = BytePlus voice zh_female_yueyunv_mars_bigtts.
 Developer side must match: the page's own scripted bot lines (pickLine) in Cantonese, and all
 text handling in UTF-8 Chinese — the robot's /demo/last `text` and WS `chat` messages arrive in Cantonese.
 
 ## Demo UX (confirmed 2026-10-09): three interacting parties
 
 ```
-USER speaks (Cantonese, wake word 机器人)
+USER speaks (Mandarin or Cantonese, wake word 机器人)
   → ROBOT: ASR → Qwen LLM → TTS reply ("好的，马上为您生成")
   → ROBOT: submits to Seedance (15s video), streams events to the PAGE
   → PAGE: renders the dialogue live + plays the generated video (URL passed to page)
