@@ -1,0 +1,8 @@
+# Python deps for the exhibition demo app ON THE ROBOT (brain board).
+# Install: pip3 install -r requirements-robot.txt
+# (If the board's network blocks PyPI, use the TUNA mirror:
+#  pip3 install -r requirements-robot.txt -i https://pypi.tuna.tsinghua.edu.cn/simple)
+flask
+flask-sock
+websocket-client
+opencv-python

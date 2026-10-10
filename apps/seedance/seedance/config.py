@@ -27,6 +27,8 @@ def _load_env_file(path: str) -> None:
             os.environ.setdefault(key, value)
 
 
+_load_env_file(os.environ.get("QIYUAN_ENV_FILE", ""))  # explicit override (robot deployment)
+_load_env_file(".env")  # current dir (robot board: /home/user/qiyuan-demo/.env)
 _load_env_file(r"D:\Qiyuan T1 Robotics project\.env")  # Windows (dev PC)
 _load_env_file("/mnt/d/Qiyuan T1 Robotics project/.env")  # WSL view of the same file
 
