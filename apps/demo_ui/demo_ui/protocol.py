@@ -3,7 +3,7 @@
 Robot Python = WebSocket server on :8765; the exhibition page = WS client.
 Message types: chat / video_ready / video_failed / system / send / ping / pong.
 
-Reference: exhibition/接口契约-展会演示系统.md + mock-ws-backend.js (living example).
+Reference: exhibition/接口契约-展会演示系统.md (the frozen contract).
 """
 from __future__ import annotations
 

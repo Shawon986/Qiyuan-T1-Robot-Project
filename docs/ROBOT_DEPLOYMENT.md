@@ -24,7 +24,7 @@ checklist covers bringing the exhibition demo live on the robot.
 | 4 | Mode (biped?) | `ros2 service call /aimdk_5Fmsgs/srv/GetMcAction ...` | biped → set `CAMERA_FLIP_180=1` in .env |
 | 5 | Internet | `curl -sI https://ark.ap-southeast.bytepluses.com/api/v3` | 2xx/3xx → direct cloud OK |
 | 6 | PrimeConsole | open console → device online → camera preview + record button | note where recordings land |
-| 7 | OpenCV Python | `python3 -c "import cv2"` | ok, or pip install (see deploy step) |
+| 7 | Capture tool env | `python3 -c "import cv2, rclpy, aimdk_msgs"` (after sourcing ROS + SDK setups) | all import ok — the official capture tool needs all three; pip install opencv-python if cv2 missing |
 
 ## Day 2 — Deploy the demo
 

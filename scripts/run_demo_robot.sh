@@ -4,10 +4,14 @@
 set -o pipefail
 cd "$(dirname "$0")"
 
-# The robot has its own ROS 2 distro; source if present, never fail otherwise.
-if [ -f /opt/ros/humble/setup.bash ]; then
-  source /opt/ros/humble/setup.bash
-fi
+# The robot has its own ROS 2 distro; source the first one found (never fail otherwise).
+# Needed so the official capture tool can import rclpy + aimdk_msgs.
+for ros_setup in /opt/ros/*/setup.bash; do
+  if [ -f "$ros_setup" ]; then
+    source "$ros_setup"
+    break
+  fi
+done
 
 # Pure-python apps run straight from source — no colcon build needed.
 export PYTHONPATH="$(pwd)/apps/demo_ui:$(pwd)/apps/seedance:$(pwd)/apps/conversation"
