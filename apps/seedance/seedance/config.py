@@ -52,6 +52,7 @@ class SeedanceConfig:
         self.poll_interval_s = float(env.get("SEEDANCE_POLL_INTERVAL_S", "5"))
         self.poll_timeout_s = float(env.get("SEEDANCE_POLL_TIMEOUT_S", "600"))
         self.upload_expire_s = int(env.get("SEEDANCE_UPLOAD_EXPIRE_S", "7200"))
+        self.uploader_choice = env.get("SEEDANCE_UPLOADER", "")  # ""=auto (TOS first), "tos", "inbox"
 
     def tos_ready(self) -> bool:
         return bool(self.tos_access_key and self.tos_secret_key and self.tos_bucket)

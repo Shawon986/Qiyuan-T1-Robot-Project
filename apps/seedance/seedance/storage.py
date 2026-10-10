@@ -102,12 +102,23 @@ class TosUploader:
 
 
 def create_uploader(cfg: SeedanceConfig | None = None):
-    """Factory: inbox first (chosen default), TOS as fallback."""
+    """Factory: TOS (our own BytePlus bucket) first since 2026-10-10 — the
+    developer's inbox was removed from their server (HTTP 404). Inbox stays as
+    fallback. SEEDANCE_UPLOADER=inbox|tos overrides."""
     cfg = cfg or SeedanceConfig()
-    if cfg.inbox_ready():
-        return InboxUploader(cfg)
+    choice = cfg.uploader_choice
+    if choice == "inbox":
+        if cfg.inbox_ready():
+            return InboxUploader(cfg)
+        raise RuntimeError("SEEDANCE_UPLOADER=inbox but inbox not configured")
+    if choice == "tos":
+        if cfg.tos_ready():
+            return TosUploader(cfg)
+        raise RuntimeError("SEEDANCE_UPLOADER=tos but TOS credentials not configured")
     if cfg.tos_ready():
         return TosUploader(cfg)
+    if cfg.inbox_ready():
+        return InboxUploader(cfg)
     raise RuntimeError(
-        "no video-hosting backend configured (set SEEDANCE_INBOX_BASE or TOS_* credentials)"
+        "no video-hosting backend configured (set TOS_* credentials or SEEDANCE_INBOX_BASE)"
     )

@@ -6,3 +6,6 @@ flask
 flask-sock
 websocket-client
 opencv-python
+boto3
+# boto3 = required since 2026-10-10: the developer removed their inbox server;
+# TOS (BytePlus bucket) is now the primary upload path for reference clips.

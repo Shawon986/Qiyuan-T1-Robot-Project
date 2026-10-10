@@ -89,15 +89,23 @@ class TestInbox(unittest.TestCase):
 
 
 class TestUploaderFactory(unittest.TestCase):
-    def test_inbox_is_default(self):
+    def test_inbox_used_when_tos_unconfigured(self):
         from seedance.storage import InboxUploader
         uploader = create_uploader(SeedanceConfig(env={"SEEDANCE_INBOX_BASE": "https://x.com"}))
         self.assertIsInstance(uploader, InboxUploader)
 
-    def test_tos_fallback_when_inbox_empty(self):
+    def test_tos_preferred_over_inbox(self):
         from seedance.storage import TosUploader
-        uploader = create_uploader(SeedanceConfig(env={**FAKE_ENV, "SEEDANCE_INBOX_BASE": ""}))
+        env = {**FAKE_ENV, "SEEDANCE_INBOX_BASE": "https://x.com"}
+        uploader = create_uploader(SeedanceConfig(env=env))
         self.assertIsInstance(uploader, TosUploader)
+
+    def test_uploader_env_override_forces_inbox(self):
+        from seedance.storage import InboxUploader
+        env = {**FAKE_ENV, "SEEDANCE_INBOX_BASE": "https://x.com",
+               "SEEDANCE_UPLOADER": "inbox"}
+        uploader = create_uploader(SeedanceConfig(env=env))
+        self.assertIsInstance(uploader, InboxUploader)
 
     def test_no_backend_raises(self):
         with self.assertRaises(RuntimeError):
