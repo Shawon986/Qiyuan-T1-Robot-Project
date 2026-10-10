@@ -381,6 +381,24 @@ Developer instruction: model `dreamina-seedance-2-0-fast-260128`, duration 15 s.
 `SEEDANCE_MODEL_ID` updated (code default already matched). Live-verified: 15s/16:9 submission
 accepted — taskId `cgt-20261010160532-hz77g`. Seedance tests 16/16 green.
 
+## 2026-10-10 — Phase 32: Camera-reference generation wired (official RTSP capture)
+
+1. **Feature**: video requests now record what the robot sees (4–5 s of the live camera
+   stream) and submit it to Seedance as `reference_video` — verified live: r2v on
+   `dreamina-seedance-2-0-fast-260128` succeeded (169 s, 15 s/16:9 output). API rule learned:
+   reference clip must be >= 407,696 pixels (>= 854x480); 640x480 is rejected with HTTP 400.
+2. **Official tooling (per user: follow official instructions only)**: the SDK's
+   `examples/python/get_video_stream.py` (portal v1.0.0.0, verbatim) is vendored at
+   `apps/demo_ui/robot_tools/` and called as a subprocess by `demo_ui/camera_capture.py`.
+   Env config: CAMERA_ROBOT_IP / CAMERA_ID / CAMERA_CAPTURE_SECONDS / CAMERA_OUTPUT_FILE /
+   CAMERA_VIDEO_REFERENCE / CAMERA_FLIP_180 (biped upside-down note from the manual) /
+   CAMERA_CAPTURE_TIMEOUT_S. Capture failure always falls back to prompt-only.
+3. Temp-only storage: the clip lives in /tmp just long enough to upload to the cloud inbox
+   and is deleted after submit — no robot storage, no SD card needed.
+4. Robot days 4–5: `pip install opencv-python` on the board, set CAMERA_ROBOT_IP, decide
+   CAMERA_FLIP_180 via GetMcAction (biped), PrimeBot internet-access answer.
+5. Tests: demo_ui 22 (5 new camera tests), conversation 26, seedance 16 — all green.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |

@@ -51,13 +51,31 @@ class DemoController:
 
     @staticmethod
     def _seedance_submit(prompt: str) -> str:
-        """Submit the task (visitor's words as prompt); return the taskId. NO waiting."""
+        """Submit the task; return the taskId. NO waiting.
+
+        Final flow: record what the robot sees (official RTSP capture) and use it
+        as the reference video. If the camera is unavailable, fall back to
+        prompt-only generation so the demo never breaks.
+        """
         if os.environ.get("DEMO_DRY") == "1":
             return f"dry-{int(time.time() * 1000)}"
         from seedance.config import SeedanceConfig
         from seedance.pipeline import SeeDancePipeline
 
         pipeline = SeeDancePipeline(SeedanceConfig())
+        if os.environ.get("CAMERA_VIDEO_REFERENCE", "1") == "1":
+            from .camera_capture import capture_clip
+            clip = capture_clip()
+            if clip is not None:
+                try:
+                    outcome = pipeline.run(prompt, video_path=str(clip), wait=False)
+                    clip.unlink(missing_ok=True)  # temp only — cloud holds the copy
+                    return outcome["task_id"]
+                except Exception as exc:
+                    print(f"[demo] video-reference submit failed "
+                          f"({type(exc).__name__}: {exc}); prompt-only fallback", flush=True)
+            else:
+                print("[demo] camera capture unavailable; prompt-only fallback", flush=True)
         return pipeline.client.submit(prompt, duration=DURATION_SECONDS, ratio=RATIO)
 
     @staticmethod
