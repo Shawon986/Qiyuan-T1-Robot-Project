@@ -5,13 +5,17 @@ checklist covers bringing the exhibition demo live on the robot.
 
 ## Day 1 — Physical + access
 
-1. **Connect**: USB-Ethernet adapter → robot and PC (usbipd already installed on
-   the PC; WSL usbip tools ready, vhci-hcd loaded).
+1. **Network**: the robot supports WiFi (confirmed with the user 2026-10-11) —
+   connect the robot to the same WiFi as the exhibition PC (via the PrimeBOT APP
+   if not already configured; the robot was registered with IP `10.1.1.100`).
+   No cable needed. (Fallback if WiFi is unreliable on-site: USB-C gigabit
+   Ethernet adapter RTL8153 + Cat6 — usbipd already installed on the PC.)
 2. **Power on** the robot.
-3. **Find the board IP**: defaults `10.1.1.100` / `.101`. From WSL:
-   `ip -br addr`, then `ping 10.1.1.100` (or arp-scan the subnet).
+3. **Find the board IP**: check the PrimeBot portal / APP for the registered IP,
+   or `ping 10.1.1.100` (board defaults `10.1.1.100`/`.101`).
 4. **SSH in** (key/password from PrimeBot after-sales — ticket sent 2026-10-10):
    `ssh -i ./<机器人SN>_soc0/id_ed25519 run@<板卡IP>`
+   (Run from Windows Git Bash — no WSL needed; the deploy script also runs there.)
 5. **Developer Mode** (official): `yamo mode edit`
 
 ## Day 1 — Robot checks (run via SSH, record results)
