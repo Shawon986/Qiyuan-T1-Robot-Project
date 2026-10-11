@@ -46,14 +46,16 @@ works list `<video src=w.videoUrl>` at line ~1128). Required additions:
 5. **(Optional) Feedback**: POST `video_start/video_status/video_result` to `/api/events`
    so the robot can TTS-announce completion.
 
-## Language requirement (locked 2026-10-10, updated 2026-10-10)
+## Language requirement (locked 2026-10-10, updated 2026-10-11)
 
 **The visitor may speak Mandarin OR Cantonese; the robot always replies in CANTONESE (粤语).**
-Live-verified 2026-10-10: AIChain ASR (engine 5, language zh-HK) transcribes both Mandarin and
-Cantonese correctly, and the AIChain persona answers in Cantonese either way.
+Live-verified: AIChain ASR (engine 5, language zh-HK) transcribes both Mandarin and Cantonese
+correctly, and the AIChain persona answers in Cantonese either way.
 Robot side confirmed Cantonese: wait phrase 請稍等我馬上幫你生成視頻, AIChain persona replies
-(Cantonese), TTS = AIChain voiceId 4 (iFlytek, confirmed Cantonese-sounding 2026-10-10; engine.speak
-uses it first), fallback = BytePlus voice zh_female_yueyunv_mars_bigtts.
+(Cantonese), TTS = **AIChain voiceId 94 「子谦(粤)」** (iFlytek male Cantonese, live 2026-10-11;
+engine.speak uses it first when AICHAIN_TTS_ENABLED=1), fallback = BytePlus voice
+zh_female_yueyunv_mars_bigtts. Server notes: 16 kHz raw PCM fixed (24 kHz and opus requests are
+ignored/empty; speed/pitch params ignored).
 Developer side must match: the page's own scripted bot lines (pickLine) in Cantonese, and all
 text handling in UTF-8 Chinese — the robot's /demo/last `text` and WS `chat` messages arrive in Cantonese.
 
