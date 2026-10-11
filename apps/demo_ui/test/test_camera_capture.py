@@ -15,7 +15,8 @@ class TestCaptureClip(unittest.TestCase):
         )
 
     def test_success_returns_clip_path(self):
-        with mock.patch.dict("os.environ", {"CAMERA_OUTPUT_FILE": "/tmp/video_capture.mp4"}):
+        with mock.patch.dict("os.environ", {"CAMERA_OUTPUT_FILE": "/tmp/video_capture.mp4",
+                                            "CAMERA_FLIP_180": "0"}):
             with self._run_mock() as run, mock.patch.object(
                     Path, "is_file", return_value=True):
                 clip = capture_clip()
@@ -27,6 +28,17 @@ class TestCaptureClip(unittest.TestCase):
         self.assertIn("--robot_ip", cmd)
         self.assertIn("--output_file", cmd)
         self.assertIn("--capture_seconds", cmd)
+
+    def test_success_with_flip_returns_flipped_path(self):
+        """Biped mode (CAMERA_FLIP_180=1): the clip is rotated before upload."""
+        with mock.patch.dict("os.environ", {"CAMERA_OUTPUT_FILE": "/tmp/video_capture.mp4",
+                                            "CAMERA_FLIP_180": "1"}):
+            with self._run_mock(), mock.patch.object(
+                    Path, "is_file", return_value=True), mock.patch(
+                    "demo_ui.camera_capture.rotate_180",
+                    return_value=Path("/tmp/video_capture_flip.mp4")):
+                clip = capture_clip()
+        self.assertEqual(clip, Path("/tmp/video_capture_flip.mp4"))
 
     def test_nonzero_exit_falls_back_to_none(self):
         with self._run_mock(returncode=1, stderr="connection refused") as run:
