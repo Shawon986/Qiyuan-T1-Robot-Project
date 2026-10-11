@@ -14,10 +14,15 @@ checklist covers bringing the exhibition demo live on the robot.
 3. **Find the board IP**: check the PrimeBot portal / APP for the registered IP,
    or `ping 10.1.1.100` (board defaults `10.1.1.100`/`.101`).
 4. **SSH in** — keys RECEIVED 2026-10-11 (robot SN `QY02BGH2609100103`):
-   `D:\Qiyuan T1 Robotics project\启元机器人二次开发密钥SN：QY02BGH2609100103\QY02BGH2609100103_soc0\id_ed25519` (soc0; soc1 also present — try soc1 if soc0 is rejected):
-   `ssh -i "D:\Qiyuan T1 Robotics project\启元机器人二次开发密钥SN：QY02BGH2609100103\QY02BGH2609100103_soc0\id_ed25519" run@<板卡IP>`
-   (Run from Windows Git Bash — no WSL needed; the deploy script also runs there.)
-5. **Developer Mode** (official): `yamo mode edit`
+   `D:\Qiyuan T1 Robotics project\启元机器人二次开发密钥SN：QY02BGH2609100103\QY02BGH2609100103_soc0\id_ed25519` (soc0; soc1 also present — try soc1 if soc0 is rejected).
+   Brain board default IP `10.1.1.101` (MC board `10.1.1.100`); run from Windows Git Bash:
+   `ssh -i "D:\Qiyuan T1 Robotics project\启元机器人二次开发密钥SN：QY02BGH2609100103\QY02BGH2609100103_soc0\id_ed25519" run@10.1.1.101`
+5. **Developer Mode** — OFFICIAL: via the phone APP (not SSH): APP connected →
+   Settings → 开发者功能 → read the notice → 开发者模式 → **基础开发模式 (Basic)**
+   → 保存配置 → **power-cycle the robot** for it to take effect.
+   ⚠️ The notice states enabling the developer feature voids warranty — CONFIRM
+   with PrimeBot after-sales whether Basic mode is exempt before enabling
+   (user's hard constraint: warranty intact).
 
 ## Day 1 — Robot checks (run via SSH, record results)
 
