@@ -19,6 +19,16 @@ DURATION_SECONDS = 15
 RATIO = "16:9"
 DRY_VIDEO_URL = os.environ.get("DEMO_DRY_VIDEO_URL", "")
 DEFAULT_WAIT_PHRASE = "請稍等，我馬上幫你生成視頻。"
+DEFAULT_GEN_PROMPT = "把這個場景變成一段自然流暢、色彩生動的電影感短片。"
+
+
+def generation_prompt() -> str:
+    """The FIXED generation prompt (on-site flow, decided 2026-10-11): visitors
+    only ask the robot to generate a video with dedicated phrases — they provide
+    NO scenario. The scene content comes entirely from the captured reference
+    footage, so the prompt is the same for every request (env VIDEO_GEN_PROMPT
+    overrides)."""
+    return os.environ.get("VIDEO_GEN_PROMPT", DEFAULT_GEN_PROMPT)
 
 
 class LatestRound:
@@ -53,14 +63,17 @@ class DemoController:
         # what the robot sees at the moment the visitor asks.
         self._submit_lock = threading.Lock()
 
-    def _seedance_submit(self, prompt: str, clip_path: str | None = None) -> str:
+    def _seedance_submit(self, visitor_text: str, clip_path: str | None = None) -> str:
         """Capture + submit; return the taskId. NO waiting.
 
         Final flow: record what the robot sees (official RTSP capture, a UNIQUE
         temp file per round so concurrent visitors never clobber each other) and
-        submit it as the reference video. If the camera is unavailable, fall back
-        to prompt-only generation so the demo never breaks.
+        submit it as the reference video with the FIXED generation prompt — the
+        scene comes from the footage, visitors provide no scenario. If the camera
+        is unavailable, fall back to prompt-only generation so the demo never
+        breaks.
         """
+        prompt = generation_prompt()
         if os.environ.get("DEMO_DRY") == "1":
             return f"dry-{int(time.time() * 1000)}"
         from seedance.config import SeedanceConfig

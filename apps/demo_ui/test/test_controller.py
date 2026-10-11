@@ -97,6 +97,18 @@ class TestConcurrentVisitors(unittest.TestCase):
         self.assertEqual(data["taskId"], "task-new")
 
 
+class TestGenerationPrompt(unittest.TestCase):
+    def test_default_fixed_prompt(self):
+        from demo_ui.controller import generation_prompt
+        self.assertIn("電影", generation_prompt())
+
+    def test_env_override(self):
+        from unittest import mock
+        from demo_ui.controller import generation_prompt
+        with mock.patch.dict("os.environ", {"VIDEO_GEN_PROMPT": "自訂場景"}):
+            self.assertEqual(generation_prompt(), "自訂場景")
+
+
 class TestSharingControl(unittest.TestCase):
     def test_chat_not_shared_by_default(self):
         """Developer requirement: the page gets video instructions ONLY."""

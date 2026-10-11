@@ -59,6 +59,16 @@ ignored/empty; speed/pitch params ignored).
 Developer side must match: the page's own scripted bot lines (pickLine) in Cantonese, and all
 text handling in UTF-8 Chinese — the robot's /demo/last `text` and WS `chat` messages arrive in Cantonese.
 
+## Fixed generation prompt (on-site flow, decided 2026-10-11)
+
+**Visitors provide NO scenario prompt** — they only ask the robot to generate a
+video with dedicated phrases (e.g. 幫我生成視頻 / 帮我生成一个视频). The robot
+captures the 5 s reference footage and submits it with a **FIXED prompt**
+(`VIDEO_GEN_PROMPT` in .env, default 「把這個場景變成一段自然流暢、色彩生動的電影感短片。」)
+— the scene content comes entirely from the camera footage. Live-verified:
+fixed prompt + reference → 15 s result (146 s). The visitor's utterance still
+travels in `/demo/last` `text` (the trigger), the fixed prompt goes to the model.
+
 ## Data sharing policy (developer requirement, implemented 2026-10-11)
 
 **The developer's page receives VIDEO-GENERATION instructions ONLY — never conversations.**
