@@ -25,7 +25,7 @@ checklist covers bringing the exhibition demo live on the robot.
 | 1 | Disk/SD state | `df -h` | brain board free space; SD mount |
 | 2 | Topics enabled | `ros2 topic list -t` | `/aima/hal/camera/head_stereo_left_orin`, `/aima/hal/audio/capture` |
 | 3 | Camera capture | `python3 examples/python/get_video_stream.py --camera_id head_stereo_left --robot_ip <IP> --capture_seconds 5.0` | 5s mp4 saved; check orientation |
-| 4 | Mode (biped?) | `ros2 service call /aimdk_5Fmsgs/srv/GetMcAction ...` | biped → set `CAMERA_FLIP_180=1` in .env |
+| 4 | Mode (biped?) | `ros2 service call /aimdk_5Fmsgs/srv/GetMcAction ...` | biped → `CAMERA_FLIP_180=1` (CONFIRMED on-site 2026-10-11: robot display shows 180°-rotated view in biped; flip already enabled in .env). If the robot runs quadruped, re-check orientation and set 0 if correct |
 | 5 | Internet | `curl -sI https://ark.ap-southeast.bytepluses.com/api/v3` | 2xx/3xx → direct cloud OK |
 | 6 | PrimeConsole | open console → device online → camera preview + record button | note where recordings land |
 | 7 | Capture tool env | `python3 -c "import cv2, rclpy, aimdk_msgs"` (after sourcing ROS + SDK setups) | all import ok — the official capture tool needs all three; pip install opencv-python if cv2 missing |
