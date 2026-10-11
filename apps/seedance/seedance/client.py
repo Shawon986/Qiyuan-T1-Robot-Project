@@ -16,7 +16,8 @@ class ArkError(RuntimeError):
 
 def build_task_payload(model: str, prompt: str, image_b64: str | None = None,
                        video_url: str | None = None, role: str = "first_frame",
-                       duration: int | None = None, ratio: str | None = None) -> dict[str, Any]:
+                       duration: int | None = None, ratio: str | None = None,
+                       generate_audio: bool = False) -> dict[str, Any]:
     """Pure payload builder (offline-testable).
 
     Validated reference rules:
@@ -26,6 +27,8 @@ def build_task_payload(model: str, prompt: str, image_b64: str | None = None,
     Generation params (per the frozen exhibition contract): top-level
     `duration` (seconds) and `ratio` (e.g. "16:9") - confirmed from the
     developer's original page payload.
+    `generate_audio` defaults to False (video-only): with audio enabled the
+    output-audio copyright policy can reject tasks (verified 2026-10-11).
     """
     content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
     if image_b64:
@@ -40,7 +43,8 @@ def build_task_payload(model: str, prompt: str, image_b64: str | None = None,
             "video_url": {"url": video_url},
             "role": "reference_video",
         })
-    body: dict[str, Any] = {"model": model, "content": content}
+    body: dict[str, Any] = {"model": model, "content": content,
+                            "generate_audio": generate_audio}
     if duration is not None:
         body["duration"] = duration
     if ratio:
@@ -81,9 +85,13 @@ class SeedanceClient:
 
     def submit(self, prompt: str, image_b64: str | None = None,
                video_url: str | None = None, role: str = "first_frame",
-               duration: int | None = None, ratio: str | None = None) -> str:
+               duration: int | None = None, ratio: str | None = None,
+               generate_audio: bool | None = None) -> str:
+        if generate_audio is None:
+            generate_audio = self.cfg.generate_audio
         body = build_task_payload(self.cfg.model_id, prompt, image_b64, video_url, role,
-                                  duration=duration, ratio=ratio)
+                                  duration=duration, ratio=ratio,
+                                  generate_audio=generate_audio)
         resp = self._request("POST", "/contents/generations/tasks", body)
         task_id = resp.get("id")
         if not task_id:

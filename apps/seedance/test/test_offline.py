@@ -50,6 +50,20 @@ class TestPayload(unittest.TestCase):
         self.assertEqual(payload["content"][1]["video_url"]["url"], "https://x/y.mp4")
         self.assertEqual(payload["content"][1]["role"], "reference_video")
 
+    def test_generate_audio_defaults_off(self):
+        payload = build_task_payload("m", "hello")
+        self.assertFalse(payload["generate_audio"])
+
+    def test_generate_audio_can_be_enabled(self):
+        payload = build_task_payload("m", "hello", generate_audio=True)
+        self.assertTrue(payload["generate_audio"])
+
+    def test_config_generate_audio_env(self):
+        cfg = SeedanceConfig(env={"SEEDANCE_GENERATE_AUDIO": "1"})
+        self.assertTrue(cfg.generate_audio)
+        cfg2 = SeedanceConfig(env={})
+        self.assertFalse(cfg2.generate_audio)
+
 
 class TestResultUrl(unittest.TestCase):
     def test_succeeded(self):

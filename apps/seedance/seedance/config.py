@@ -53,6 +53,9 @@ class SeedanceConfig:
         self.poll_timeout_s = float(env.get("SEEDANCE_POLL_TIMEOUT_S", "600"))
         self.upload_expire_s = int(env.get("SEEDANCE_UPLOAD_EXPIRE_S", "7200"))
         self.uploader_choice = env.get("SEEDANCE_UPLOADER", "")  # ""=auto (TOS first), "tos", "inbox"
+        # video-only by default: output-audio trips a copyright policy on some
+        # content (verified 2026-10-11); SEEDANCE_GENERATE_AUDIO=1 re-enables audio
+        self.generate_audio = env.get("SEEDANCE_GENERATE_AUDIO", "0") == "1"
 
     def tos_ready(self) -> bool:
         return bool(self.tos_access_key and self.tos_secret_key and self.tos_bucket)
