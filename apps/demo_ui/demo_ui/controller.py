@@ -48,14 +48,18 @@ class DemoController:
         self._submitter = submitter or self._seedance_submit
         self._responder = responder or self._aichain_respond
         self.wait_phrase = wait_phrase or os.environ.get("DEMO_WAIT_PHRASE", DEFAULT_WAIT_PHRASE)
+        # Uploads/submits are serialized (bandwidth + coherent /demo/last order).
+        # Capture itself runs IMMEDIATELY on intent so the footage is precisely
+        # what the robot sees at the moment the visitor asks.
+        self._submit_lock = threading.Lock()
 
-    @staticmethod
-    def _seedance_submit(prompt: str) -> str:
-        """Submit the task; return the taskId. NO waiting.
+    def _seedance_submit(self, prompt: str, clip_path: str | None = None) -> str:
+        """Capture + submit; return the taskId. NO waiting.
 
-        Final flow: record what the robot sees (official RTSP capture) and use it
-        as the reference video. If the camera is unavailable, fall back to
-        prompt-only generation so the demo never breaks.
+        Final flow: record what the robot sees (official RTSP capture, a UNIQUE
+        temp file per round so concurrent visitors never clobber each other) and
+        submit it as the reference video. If the camera is unavailable, fall back
+        to prompt-only generation so the demo never breaks.
         """
         if os.environ.get("DEMO_DRY") == "1":
             return f"dry-{int(time.time() * 1000)}"
@@ -65,10 +69,11 @@ class DemoController:
         pipeline = SeeDancePipeline(SeedanceConfig())
         if os.environ.get("CAMERA_VIDEO_REFERENCE", "1") == "1":
             from .camera_capture import capture_clip
-            clip = capture_clip()
+            clip = capture_clip(output=clip_path)
             if clip is not None:
                 try:
-                    outcome = pipeline.run(prompt, video_path=str(clip), wait=False)
+                    with self._submit_lock:
+                        outcome = pipeline.run(prompt, video_path=str(clip), wait=False)
                     clip.unlink(missing_ok=True)  # temp only — cloud holds the copy
                     return outcome["task_id"]
                 except Exception as exc:
@@ -76,7 +81,8 @@ class DemoController:
                           f"({type(exc).__name__}: {exc}); prompt-only fallback", flush=True)
             else:
                 print("[demo] camera capture unavailable; prompt-only fallback", flush=True)
-        return pipeline.client.submit(prompt, duration=DURATION_SECONDS, ratio=RATIO)
+        with self._submit_lock:
+            return pipeline.client.submit(prompt, duration=DURATION_SECONDS, ratio=RATIO)
 
     @staticmethod
     def _aichain_respond(text: str) -> str:
@@ -98,18 +104,24 @@ class DemoController:
     def _run(self, r: int, text: str) -> None:
         from conversation.intent import classify_intent
         if classify_intent(text) == "generate_video":
+            # unique temp file per round: concurrent visitors never collide
+            clip_path = f"/tmp/video_capture_r{r}_{int(time.time() * 1000)}.mp4"
             try:
-                task_id = self._submitter(text)
-                latest.set(r, text, task_id)
+                task_id = self._submitter(text, clip_path)
+                # never let an older round overwrite a newer one on /demo/last
+                if r >= latest.get()["round"]:
+                    latest.set(r, text, task_id)
                 print(f"[demo] round {r} task submitted: {task_id}", flush=True)
             except Exception as exc:
                 print(f"[demo] round {r} submit failed: {type(exc).__name__}: {exc}", flush=True)
                 self.rounds.finish_failed(r, f"submit_error: {type(exc).__name__}")
             return
-        # chat turn: answer via AIChain (Cantonese) and push the reply to the page
+        # chat turn: answer via AIChain (Cantonese). The reply is broadcast to
+        # connected pages ONLY when SHARE_CHAT_WITH_PAGE=1 — by default (0) the
+        # developer's page receives video instructions only, never conversations.
         try:
             answer = self._responder(text)
-            if answer:
+            if answer and os.environ.get("SHARE_CHAT_WITH_PAGE", "0") == "1":
                 self.rounds.broadcast_chat(r, "bot", answer)
         except Exception as exc:
             print(f"[demo] round {r} conversation failed: {type(exc).__name__}: {exc}", flush=True)

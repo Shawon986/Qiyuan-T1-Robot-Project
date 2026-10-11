@@ -1,4 +1,5 @@
 """Offline tests for the final demo controller (video intent + /demo/last)."""
+import time
 import unittest
 
 from demo_ui.controller import DEFAULT_WAIT_PHRASE, DemoController, LatestRound
@@ -16,7 +17,7 @@ class FakeHub:
 def make_controller(submitter=None, responder=None):
     hub = FakeHub()
     rounds = RoundManager(hub.broadcast, timeout_s=90)
-    ctrl = DemoController(rounds, submitter=submitter or (lambda t: "task-123"),
+    ctrl = DemoController(rounds, submitter=submitter or (lambda t, clip_path=None: "task-123"),
                           responder=responder or (lambda t: "我好好呀"))
     return hub, rounds, ctrl
 
@@ -48,7 +49,8 @@ class TestVideoIntent(unittest.TestCase):
         self.assertEqual(data["text"], "帮我生成一个海边日落的视频")
 
     def test_submit_failure_emits_video_failed(self):
-        hub, rounds, ctrl = make_controller(submitter=(lambda t: (_ for _ in ()).throw(RuntimeError("boom"))))
+        hub, rounds, ctrl = make_controller(
+            submitter=(lambda t, clip_path=None: (_ for _ in ()).throw(RuntimeError("boom"))))
         ctrl.start_round("帮我生成一个视频")
         import time
         time.sleep(0.3)
@@ -57,12 +59,67 @@ class TestVideoIntent(unittest.TestCase):
         self.assertIn("submit_error", terminals[0]["reason"])
 
 
-class TestChatIntent(unittest.TestCase):
-    def test_chat_turn_answers_via_responder(self):
+class TestConcurrentVisitors(unittest.TestCase):
+    def test_video_rounds_get_unique_clip_paths(self):
+        """Concurrent visitors must never clobber each other's capture file."""
+        paths = []
+
+        def submitter(t, clip_path=None):
+            paths.append(clip_path)
+            return f"task-{len(paths)}"
+
+        hub, rounds, ctrl = make_controller(submitter=submitter)
+        ctrl.start_round("帮我生成视频")
+        ctrl.start_round("再帮我生成一个视频")
+        import time
+        time.sleep(0.3)
+        self.assertEqual(len(paths), 2)
+        self.assertIsNotNone(paths[0])
+        self.assertNotEqual(paths[0], paths[1])
+        self.assertIn("video_capture_r1_", paths[0])
+        self.assertIn("video_capture_r2_", paths[1])
+
+    def test_older_round_never_overwrites_demo_last(self):
+        """A slow older round must not clobber a newer one on /demo/last."""
+        from demo_ui import controller
+        controller.latest = controller.LatestRound()
+        controller.latest.set(5, "newest", "task-new")
+
+        def submitter(t, clip_path=None):
+            time.sleep(0.2)
+            return "task-old"
+
+        hub, rounds, ctrl = make_controller(submitter=submitter)
+        r = ctrl.start_round("帮我生成视频")
+        time.sleep(0.4)
+        data = controller.latest.get()
+        self.assertEqual(data["round"], 5)  # the guard kept the newer round
+        self.assertEqual(data["taskId"], "task-new")
+
+
+class TestSharingControl(unittest.TestCase):
+    def test_chat_not_shared_by_default(self):
+        """Developer requirement: the page gets video instructions ONLY."""
+        from demo_ui import controller
+        controller.latest = controller.LatestRound()
+        saved = controller.latest.get()
         hub, rounds, ctrl = make_controller()
         ctrl.start_round("你今日點呀？")
         import time
         time.sleep(0.3)
+        bots = [m for m in hub.sent if m["role"] == "bot"]
+        self.assertEqual(bots, [])  # no chat broadcast with default SHARE_CHAT_WITH_PAGE=0
+        # /demo/last untouched by chat rounds
+        self.assertEqual(controller.latest.get()["round"], saved["round"])
+        controller.latest.set(saved["round"], saved["text"], saved["taskId"])
+
+    def test_chat_shared_when_explicitly_enabled(self):
+        from unittest import mock
+        hub, rounds, ctrl = make_controller()
+        with mock.patch.dict("os.environ", {"SHARE_CHAT_WITH_PAGE": "1"}):
+            ctrl.start_round("你今日點呀？")
+            import time
+            time.sleep(0.3)
         bots = [m for m in hub.sent if m["role"] == "bot"]
         self.assertEqual(len(bots), 1)
         self.assertEqual(bots[0]["text"], "我好好呀")

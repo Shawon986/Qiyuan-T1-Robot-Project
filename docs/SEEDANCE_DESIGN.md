@@ -59,6 +59,22 @@ ignored/empty; speed/pitch params ignored).
 Developer side must match: the page's own scripted bot lines (pickLine) in Cantonese, and all
 text handling in UTF-8 Chinese — the robot's /demo/last `text` and WS `chat` messages arrive in Cantonese.
 
+## Data sharing policy (developer requirement, implemented 2026-10-11)
+
+**The developer's page receives VIDEO-GENERATION instructions ONLY — never conversations.**
+
+| Channel | What the developer side receives | Control |
+|---|---|---|
+| `GET /demo/last` (their robotUrl poll) | `{round, text, time, taskId}` where `text` = the visitor's video prompt; written **only** on video rounds — chat rounds never touch it | enforced + regression-tested |
+| WS `chat` messages | **Off by default** (`SHARE_CHAT_WITH_PAGE=0`) — chat replies are not broadcast; only video-round messages (visitor prompt + wait phrase) go out | env switch for debugging |
+| Seedance task | the video prompt (required for generation) | inherent |
+
+**Concurrent-visitor capture control (same date):** each video request captures
+IMMEDIATELY on intent (the footage is precisely what the robot sees at that
+moment) into a unique temp file (`/tmp/video_capture_r<round>_<ts>.mp4` — visitors
+never clobber each other); uploads/submits are serialized, and an older round can
+never overwrite a newer one on `/demo/last`.
+
 ## Demo UX (confirmed 2026-10-09): three interacting parties
 
 ```
