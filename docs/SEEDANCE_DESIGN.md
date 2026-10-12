@@ -52,10 +52,13 @@ works list `<video src=w.videoUrl>` at line ~1128). Required additions:
 Live-verified: AIChain ASR (engine 5, language zh-HK) transcribes both Mandarin and Cantonese
 correctly, and the AIChain persona answers in Cantonese either way.
 Robot side confirmed Cantonese: wait phrase 請稍等我馬上幫你生成視頻, AIChain persona replies
-(Cantonese), TTS = **AIChain voiceId 94 「子谦(粤)」** (iFlytek male Cantonese, live 2026-10-11;
-engine.speak uses it first when AICHAIN_TTS_ENABLED=1), fallback = BytePlus voice
-zh_female_yueyunv_mars_bigtts. Server notes: 16 kHz raw PCM fixed (24 kHz and opus requests are
-ignored/empty; speed/pitch params ignored).
+(Cantonese), TTS = **AIChain voiceId 94 「子谦(粤)」 under the `zh` voices key** (iFlytek's
+official correction 2026-10-12 — the Cantonese voice lives under `zh`, NOT `zh-HK`;
+`AICHAIN_TTS_VOICE_KEY=zh` + `AICHAIN_TTS_ENABLED=1`; live-verified Cantonese), fallback =
+BytePlus voice zh_female_yueyunv_mars_bigtts. Server notes: 16 kHz raw PCM fixed (24 kHz and
+opus requests are ignored/empty; speed/pitch params ignored). ⚠️ History: under zh-HK, voice 94
+turned into a Mandarin child voice when the platform overwrote the console config — with the
+`zh` key it is stable Cantonese.
 Developer side must match: the page's own scripted bot lines (pickLine) in Cantonese, and all
 text handling in UTF-8 Chinese — the robot's /demo/last `text` and WS `chat` messages arrive in Cantonese.
 
