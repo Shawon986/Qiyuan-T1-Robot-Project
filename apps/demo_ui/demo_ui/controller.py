@@ -22,6 +22,12 @@ DEFAULT_WAIT_PHRASE = "請稍等，我馬上幫你生成視頻。"
 DEFAULT_GEN_PROMPT = "把這個場景變成一段自然流暢、色彩生動的電影感短片。"
 
 
+def _play_text_guarded(text: str) -> None:
+    """Lazy wrapper so offline tests never import the ROS/audio stack."""
+    from .robot_audio import play_text
+    play_text(text)
+
+
 def generation_prompt() -> str:
     """The FIXED generation prompt (on-site flow, decided 2026-10-11): visitors
     only ask the robot to generate a video with dedicated phrases — they provide
@@ -128,13 +134,27 @@ class DemoController:
             except Exception as exc:
                 print(f"[demo] round {r} submit failed: {type(exc).__name__}: {exc}", flush=True)
                 self.rounds.finish_failed(r, f"submit_error: {type(exc).__name__}")
+            self._speak(self.wait_phrase)
             return
         # chat turn: answer via AIChain (Cantonese). The reply is broadcast to
         # connected pages ONLY when SHARE_CHAT_WITH_PAGE=1 — by default (0) the
         # developer's page receives video instructions only, never conversations.
         try:
             answer = self._responder(text)
-            if answer and os.environ.get("SHARE_CHAT_WITH_PAGE", "0") == "1":
-                self.rounds.broadcast_chat(r, "bot", answer)
+            if answer:
+                if os.environ.get("SHARE_CHAT_WITH_PAGE", "0") == "1":
+                    self.rounds.broadcast_chat(r, "bot", answer)
+                self._speak(answer)
         except Exception as exc:
             print(f"[demo] round {r} conversation failed: {type(exc).__name__}: {exc}", flush=True)
+
+    @staticmethod
+    def _speak(text: str) -> None:
+        """Play the Cantonese reply on the robot's speaker (official PlayAudioFile).
+
+        Audio playback never blocks or breaks the round: it runs in a background
+        thread and every failure is swallowed by robot_audio.play_text.
+        """
+        if os.environ.get("AUDIO_PLAYBACK", "off") != "playaudiofile":
+            return
+        threading.Thread(target=_play_text_guarded, args=(text,), daemon=True).start()

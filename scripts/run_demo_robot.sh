@@ -17,5 +17,8 @@ done
 export PYTHONPATH="$(pwd)/apps/demo_ui:$(pwd)/apps/seedance:$(pwd)/apps/conversation"
 # .env sits next to the apps; the loaders also check $PWD/.env and QIYUAN_ENV_FILE.
 export QIYUAN_ENV_FILE="$(pwd)/.env"
+# On the robot: speak replies through the OFFICIAL PlayAudioFile service
+# (local file playback - the platform's Mandarin-only cloud TTS is never used).
+export AUDIO_PLAYBACK=playaudiofile
 
 exec python3 -m demo_ui.server --host 0.0.0.0 --port 8765 --pages "$(pwd)/exhibition/exhibition"
