@@ -29,8 +29,17 @@ SERVICE_TIMEOUT_S = 3.0
 
 class RobotAudioPlayer:
     def __init__(self, temp_dir: str | None = None) -> None:
-        self.temp_dir = Path(temp_dir or os.environ.get("AUDIO_TEMP_DIR", "/tmp/qiyuan_audio"))
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
+        # official storage scheme (快速入门指南 §2.1.6): audio files -> /home/user/audio.
+        # On machines without /home/user (e.g. the dev PC) fall back to the system
+        # temp dir so the module never breaks.
+        path = Path(temp_dir or os.environ.get("AUDIO_TEMP_DIR", "/home/user/audio"))
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            import tempfile
+            path = Path(tempfile.gettempdir()) / "qiyuan_audio"
+            path.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = path
         self._client = None
         self._node = None
         self._lock = threading.Lock()
