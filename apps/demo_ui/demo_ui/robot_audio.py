@@ -287,6 +287,29 @@ class RobotAudioPlayer:
         with self._events_lock:
             return [e for e in self._play_events if e[1] == pkg_name]
 
+    def _wait_for_quiet(self, timeout_s: float = 8.0) -> bool:
+        """Wait until no other audio is playing before submitting ours.
+
+        The robot's own agent plays wake/status prompts ("我在" + ding) — this
+        gives them a moment to finish so our reply doesn't overlap. Same
+        pattern as the developer's framework. No state feed (dev PC) -> pass.
+        """
+        if self._node is None:
+            return True
+        discover_until = time.monotonic() + 1.0
+        deadline = time.monotonic() + timeout_s
+        while True:
+            with self._events_lock:
+                latest = {pkg: state for _, pkg, state in self._play_events}
+            now = time.monotonic()
+            if now >= discover_until and not any(s == 1 for s in latest.values()):
+                return True
+            if now >= deadline:
+                print(f"[robot_audio] warning: other audio still playing after "
+                      f"{timeout_s:.0f}s; submitting anyway", flush=True)
+                return False
+            time.sleep(0.2)
+
     def _schedule_aftermath(self, play_src: Path, src: Path, remote: str | None) -> None:
         """Background thread: verify playback (warnings only), then clean up."""
         pkg_name = "qiyuan-demo"
@@ -348,6 +371,8 @@ class RobotAudioPlayer:
         play_src = convert_to_robot_wav(src)
         remote = upload_to_soc0(play_src) if upload_enabled() else None
         request_path = remote if remote is not None else str(play_src)
+        # give the robot's own wake/status prompts a moment to finish first
+        self._wait_for_quiet()
         try:
             fields = build_play_request(request_path)
             req = self._svc.Request()

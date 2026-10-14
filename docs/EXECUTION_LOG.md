@@ -431,6 +431,26 @@ But its T1 integration is robot-validated and exposed three defects in ours, now
    capture, TCP :6001 fallback playback, native-topic plan B, do-not-run-PrimeBuddy-concurrently).
 6. Tests: demo_ui suite now 67 (new robot_audio protocol/conversion/upload + mic capture math) — all green.
 
+## 2026-10-14 — Phase 33.1: Quiet-wait before playback + PrimeBot ticket draft
+
+1. **Quiet-wait (robot_audio.py)**: before submitting a reply, the app now waits
+   ~1 s and checks `/aima/hal/audio/play_state` — if the robot's own wake/status
+   prompts ("我在" + ding) are playing, it waits up to 8 s (then submits with a
+   warning). Same pattern as the developer's framework; no-op without the state
+   feed (dev PC). Prevents our Cantonese reply overlapping the built-in agent's
+   prompt audio.
+2. **KNOWN OPEN RISK (robot day)**: the robot's built-in assistant wakes on
+   元仔元仔 and replies in Mandarin via platform TTS while our app also listens
+   to that wake word → possible double response. The developer's framework
+   solves it by switching the official agent to `only_voice` mode; we have NOT
+   adopted that (changes robot-wide behavior + unverified wake mapping) —
+   pending PrimeBot's answer (ticket item 2) and user sign-off.
+3. **NEW docs/PRIMEBOT_TICKET.md** (bilingual draft): warranty confirmation for
+   Basic developer mode, mute built-in assistant for the exhibition, inter-board
+   SSH + PlayAudioFile/SoC 0 pattern, firmware↔SDK baseline, brain-board
+   internet, audio/video interface confirmation, gimbal trajectory + 6 custom
+   upper joint names (backlog).
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |

@@ -134,6 +134,29 @@ class TestAcceptedSemantics(unittest.TestCase):
         self.assertFalse(ra.request_accepted(types.SimpleNamespace()))
 
 
+class TestWaitForQuiet(unittest.TestCase):
+    def test_no_state_feed_passes_immediately(self):
+        player = RobotAudioPlayer()
+        player._node = None  # dev PC: no play-state subscription -> nothing to wait for
+        self.assertTrue(player._wait_for_quiet())
+
+    def test_quiet_topic_returns_true(self):
+        player = RobotAudioPlayer()
+        player._node = mock.Mock()
+        # monotonic is called for both deadline computations, then once per loop
+        with mock.patch("demo_ui.robot_audio.time.monotonic", side_effect=[0.0, 0.1, 1.5]), \
+             mock.patch("demo_ui.robot_audio.time.sleep"):
+            self.assertTrue(player._wait_for_quiet())
+
+    def test_other_audio_playing_times_out_to_false(self):
+        player = RobotAudioPlayer()
+        player._node = mock.Mock()
+        player._play_events = [(0.0, "other", 1)]  # someone else is playing
+        with mock.patch("demo_ui.robot_audio.time.monotonic", side_effect=[0.0, 0.1, 9.0]), \
+             mock.patch("demo_ui.robot_audio.time.sleep"):
+            self.assertFalse(player._wait_for_quiet())
+
+
 class TestConversion(unittest.TestCase):
     def _wav(self, rate, channels=1, width=2):
         tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
