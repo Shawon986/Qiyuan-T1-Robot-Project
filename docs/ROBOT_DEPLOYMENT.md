@@ -96,9 +96,12 @@ on-robot framework (PrimeBuddy). The app now handles all of this automatically.
 - On the robot: PulseAudio unix socket (no module loading). From the PC:
   TCP :4713 (needs `module-native-protocol-tcp` on the robot — run the
   official `record_audio.py` example once over SSH to load it).
-- Robot-day voice loop: `python3 -m conversation.main --mic 6` (capture →
-  ASR → LLM → TTS → PlayAudioFile). `MIC_PULSE_SERVER` env overrides the
-  endpoint.
+- Robot-day voice loop: `python3 -m conversation.main --listen` (continuous:
+  capture → ASR → LLM → TTS → PlayAudioFile → re-arm; Ctrl+C stops).
+  `--mic 6` is the one-shot variant for testing. Safe by construction: replies
+  only on wake-word transcripts and never captures while the robot is
+  speaking (reply duration + quiet margin), so the robot can't hear itself.
+  `MIC_PULSE_SERVER` env overrides the endpoint.
 - Plan B (from the developer's framework, reverse-engineered, UNVERIFIED on
   this robot): subscribe `/agent/process_audio_output` (stream_id 0, VAD
   states) + `/aima/agent/interaction_state` — the official agent's processed

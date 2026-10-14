@@ -451,6 +451,17 @@ But its T1 integration is robot-validated and exposed three defects in ours, now
    internet, audio/video interface confirmation, gimbal trajectory + 6 custom
    upper joint names (backlog).
 
+## 2026-10-14 — Phase 33.2: Continuous robot voice loop (`conversation --listen`)
+
+The last app-layer gap before robot day. `--listen` loops capture → ASR →
+LLM → TTS → PlayAudioFile → re-arm, with two safety guards: replies only when
+a wake word is in the transcript, and the next capture window waits for the
+reply to finish + a 1.5 s quiet margin (the robot never hears itself — the
+mic picks up the speaker acoustically even though ch1-2 loopback is excluded).
+`--mic N` remains the one-shot test variant. WAV duration derived from the
+TTS bytes; mp3/unknown falls back to a conservative 8 s wait. Tests now 75,
+all green.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |
