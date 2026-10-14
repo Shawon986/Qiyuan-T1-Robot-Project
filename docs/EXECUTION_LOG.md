@@ -399,6 +399,38 @@ accepted — taskId `cgt-20261010160532-hz77g`. Seedance tests 16/16 green.
    CAMERA_FLIP_180 via GetMcAction (biped), PrimeBot internet-access answer.
 5. Tests: demo_ui 22 (5 new camera tests), conversation 26, seedance 16 — all green.
 
+## 2026-10-14 — Phase 33: Robot audio/capture protocol fixes (from the developer's PrimeBuddy framework)
+
+The developer shared their on-robot voice-skill framework (github.com/huang-kai/primebuddy,
+cloned to downloads/primebuddy-20261014). Compared it against our app: it is a general
+voice-skill platform (music/lights, Mandarin-only, no video demo) — NOT a substitute for our
+exhibition app, which remains the only code meeting the Cantonese + Seedance + page contract.
+But its T1 integration is robot-validated and exposed three defects in ours, now fixed:
+
+1. **PlayAudioFile protocol fixes (demo_ui/robot_audio.py)**:
+   - `file_path` = DIRECTORY, `file_name` = filename (official Python example + their code agree;
+     we previously passed the full path).
+   - The audio service runs on **SoC 0** and reads SoC 0 disk → the app now scp's each reply to
+     `/tmp/qiyuan-demo.<rand>/` on SoC 0 (inter-board SSH `run@10.1.1.100`, ROBOT_SSH_* from .env,
+     `ROBOT_AUDIO_UPLOAD=auto`), plays, cleans up. Graceful local-path fallback on any failure.
+   - **24 kHz mono PCM16 WAV** is the official example format → ffmpeg conversion added
+     (AIChain 16 kHz PCM / BytePlus mp3 both converted; graceful without ffmpeg).
+   - Success = code == 0 OR status == SUCCESS (official example semantics).
+   - Playback verification via `/aima/hal/audio/play_state` (start ≤8 s, natural end;
+     warnings only, never crashes).
+   - Request header stamp now set (official example does).
+2. **Mic capture (NEW conversation/mic_capture.py)**: official 8ch/48kHz PulseAudio pattern —
+   `parec` → ch5-6 averaged ×10 → mono → 16 kHz WAV for ASR; unix socket on the robot,
+   TCP :4713 from the PC (`MIC_PULSE_SERVER` override). `conversation --mic N` completes the
+   on-robot loop (capture → ASR → LLM → TTS → PlayAudioFile).
+3. **Board env sourcing (run_demo_robot.sh)**: adds `/robot/etc/basic_env` +
+   `/robot/software/housekeeper/bin/setup.bash` (their documented paths) so aimdk_msgs
+   imports work on the board.
+4. **Wake word**: the robot's native wake word is 元仔元仔 → WAKE_WORDS now `机器人,元仔元仔`.
+5. Docs: ROBOT_DEPLOYMENT.md gains a robot-confirmed audio section (PlayAudioFile semantics,
+   capture, TCP :6001 fallback playback, native-topic plan B, do-not-run-PrimeBuddy-concurrently).
+6. Tests: demo_ui suite now 67 (new robot_audio protocol/conversion/upload + mic capture math) — all green.
+
 ## Status & next steps| Item | Status |
 |---|---|
 | WSL Ubuntu 22.04 + ROS 2 Humble | ✅ verified |

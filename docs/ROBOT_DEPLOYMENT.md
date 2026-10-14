@@ -63,6 +63,53 @@ Open the page on the exhibition PC: `http://<board-ip>:8766/v2-aurora-flow.html`
    policy false-positive; a slightly different prompt passes)
 4. Biped mode → `CAMERA_FLIP_180=1` in the board `.env`
 
+## Audio playback & capture — robot-confirmed facts
+
+Cross-checked 2026-10-14 against the official 接口说明.md AND the developer's
+on-robot framework (PrimeBuddy). The app now handles all of this automatically.
+
+**Playback (`demo_ui/robot_audio.py`, official PlayAudioFile service):**
+
+- `file_path` = **directory**, `file_name` = filename (official Python example:
+  `file_path:=/robot/software/aimrt_agent/bin/cfg/t1/audio`, `file_name:=小星星.wav`).
+- The audio service runs on **SoC 0** and reads files from SoC 0's disk. The app
+  scp's each reply to `/tmp/qiyuan-demo.<rand>/` on SoC 0 (inter-board SSH,
+  user `run@10.1.1.100`, `ROBOT_SSH_*` in `.env`; `ROBOT_AUDIO_UPLOAD=auto`
+  turns it on when running on the robot) and cleans up afterwards.
+- Robot format: **24 kHz mono PCM16 WAV** (the official example's own format).
+  Our TTS legs output 16 kHz PCM (AIChain) or mp3 (BytePlus) → converted with
+  **ffmpeg** on the board (`apt install ffmpeg`).
+- Success = header `code == 0` OR `status == SUCCESS`.
+- Playback is verified via `/aima/hal/audio/play_state` events (start within
+  8 s, natural end); failures are warnings only.
+- Fallback playback path if PlayAudioFile misbehaves: **TCP :6001**
+  (接口说明.md §2.2.1.4, PulseAudio simple-protocol; official
+  `play_audio_from_pc.py` loads the module over SSH; WAV auto-resampled to
+  48 kHz mono).
+
+**Capture (`conversation/mic_capture.py`, official record_audio.py pattern):**
+
+- Robot mic = 8-channel 48 kHz S16LE PulseAudio source
+  `alsa_input.platform-aw89403_sound.pro-input-0`; **ch5-6** are the main
+  pickup channels (mixed mono, ×10 gain — exactly what the official example's
+  `mic_mono.wav` does), resampled to 16 kHz for ASR.
+- On the robot: PulseAudio unix socket (no module loading). From the PC:
+  TCP :4713 (needs `module-native-protocol-tcp` on the robot — run the
+  official `record_audio.py` example once over SSH to load it).
+- Robot-day voice loop: `python3 -m conversation.main --mic 6` (capture →
+  ASR → LLM → TTS → PlayAudioFile). `MIC_PULSE_SERVER` env overrides the
+  endpoint.
+- Plan B (from the developer's framework, reverse-engineered, UNVERIFIED on
+  this robot): subscribe `/agent/process_audio_output` (stream_id 0, VAD
+  states) + `/aima/agent/interaction_state` — the official agent's processed
+  audio with VAD; may replace TCP capture if the PulseAudio route is blocked.
+- The robot's native wake word is **元仔元仔** — added to `WAKE_WORDS` in
+  `.env` (visitors will use it naturally).
+
+**⚠️ Do not run PrimeBuddy (the developer's voice-skill framework) at the
+same time as our demo** — it switches the official agent to `only_voice` mode
+and owns audio playback; concurrent use causes agent-mode and audio conflicts.
+
 ## Open items still with PrimeBot
 
 - Firmware version ↔ SDK baseline (portal v1.0.0.0 vs repo v0.9.4.7)

@@ -13,6 +13,11 @@ for ros_setup in /opt/ros/*/setup.bash; do
   fi
 done
 
+# Board-specific SDK environment (paths from the official developer framework).
+# Without these, aimdk_msgs imports can fail on the board even with /opt/ros sourced.
+[ -f /robot/etc/basic_env ] && source /robot/etc/basic_env
+[ -f /robot/software/housekeeper/bin/setup.bash ] && source /robot/software/housekeeper/bin/setup.bash
+
 # Pure-python apps run straight from source — no colcon build needed.
 export PYTHONPATH="$(pwd)/apps/demo_ui:$(pwd)/apps/seedance:$(pwd)/apps/conversation"
 # .env sits next to the apps; the loaders also check $PWD/.env and QIYUAN_ENV_FILE.

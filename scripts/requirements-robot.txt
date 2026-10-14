@@ -9,3 +9,11 @@ opencv-python
 boto3
 # boto3 = required since 2026-10-10: the developer removed their inbox server;
 # TOS (BytePlus bucket) is now the primary upload path for reference clips.
+
+# System packages (apt, NOT pip) also needed on the board:
+#   ffmpeg           - converts mp3/16 kHz TTS output to 24 kHz mono WAV, the
+#                      format the official PlayAudioFile example uses
+#   pulseaudio-utils - parec for mic capture (robot mic = 8ch 48 kHz, ch5-6)
+#   sshpass          - only when ROBOT_SSH_PASSWORD is set (inter-board SSH to
+#                      SoC 0, where PlayAudioFile reads files from disk)
+#   sudo apt install -y ffmpeg pulseaudio-utils sshpass
